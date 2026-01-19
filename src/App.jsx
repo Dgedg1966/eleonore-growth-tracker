@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { omsTables } from './omsData'; // Assure-toi que ce fichier contient p3, p15, p50, p85, p97
 import { nutritionData } from './nutritionData';
+import NutritionDashboard from './NutritionDashboard';
 
 const BabyDashboard = () => {
   const [view, setView] = useState('weight');
@@ -65,6 +66,7 @@ const BabyDashboard = () => {
     </div>
   );
 };
+
 
 
 
