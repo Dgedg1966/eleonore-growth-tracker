@@ -89,7 +89,28 @@ function App() {
           </div>
           <div className="p-6 space-y-4">
             <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
-              <span className="text
+              <span className="text-gray-600">Début de l'historique</span>
+              <span className="font-bold">{currentData.startDate}</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
+              <span className="text-gray-600">Jours analysés</span>
+              <span className="font-bold">{currentData.totalDays} jours</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl">
+              <span className="text-blue-700 font-medium">Consommation moyenne</span>
+              <span className="text-blue-700 font-bold text-xl">{currentData.avgMilk} / jour</span>
+            </div>
+          </div>
+        </div>
+      </main>
 
+      <footer className="text-center py-8 text-gray-400 text-sm">
+        Rapport généré pour le suivi pédiatrique d'Éléonore
+      </footer>
+    </div>
+  )
 }
+
+export default App
+
 
