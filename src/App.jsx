@@ -1,60 +1,56 @@
 // Ce code contient les corrections pour Éléonore
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, ComposedChart } from 'recharts';
-import { Baby, Scale, Ruler, Brain, Printer, TrendingUp, Droplets, Calendar, ChevronRight } from 'lucide-react';
+import { Baby, Scale, Ruler, Brain, Printer, TrendingUp, Droplets, Calendar } from 'lucide-react';
+
+// Importation des données (Une fois les fichiers créés)
+// import { omsTables } from './omsData';
+// import { measures } from './babyMeasures';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('growth');
-  const [growthType, setGrowthType] = useState('weight'); // weight, height, or head
+  const [growthType, setGrowthType] = useState('weight');
 
-  // TABLES DE RÉFÉRENCE OMS (SIMPLIFIÉES)
-  const omsData = {
-    weight: [
-      { month: 'Naiss.', current: 3.3, p15: 2.8, p50: 3.2, p85: 4.0 },
-      { month: 'M2', current: 5.1, p15: 4.5, p50: 5.1, p85: 6.0 },
-      { month: 'M4', current: 6.5, p15: 5.7, p50: 6.4, p85: 7.5 },
-      { month: 'M6', current: 7.8, p15: 6.5, p50: 7.3, p85: 8.5 },
-    ],
-    height: [
-      { month: 'Naiss.', current: 50, p15: 47, p50: 49, p85: 52 },
-      { month: 'M2', current: 57, p15: 54, p50: 56, p85: 59 },
-      { month: 'M4', current: 64, p15: 61, p50: 63, p85: 66 },
-      { month: 'M6', current: 70, p15: 65, p50: 67, p85: 71 },
-    ],
-    head: [
-      { month: 'Naiss.', current: 34, p15: 33, p50: 34, p85: 36 },
-      { month: 'M2', current: 38.5, p15: 37, p50: 38, p85: 39.5 },
-      { month: 'M4', current: 41.5, p15: 40, p50: 41, p85: 42.5 },
-      { month: 'M6', current: 43.8, p15: 42, p50: 43, p85: 44.5 },
-    ]
-  };
-
-  // NUTRITION : MATERNEL, CHÈVRE, VACHE
-  const nutritionHistory = [
-    { period: 'Fin Juil', maternel: 840, chevre: 0, vache: 0 },
-    { period: 'Août', maternel: 600, chevre: 100, vache: 140 },
-    { period: 'Sept', maternel: 300, chevre: 340, vache: 200 },
-    { period: 'Oct', maternel: 50, chevre: 590, vache: 200 },
-    { period: 'Nov', maternel: 0, chevre: 740, vache: 100 },
+  // DONNÉES NUTRITION HEBDOMADAIRES (Exemple à remplacer par ton Excel)
+  const nutritionWeekly = [
+    { week: 'S29', maternel: 840, chevre: 0, vache: 0 },
+    { week: 'S32', maternel: 500, chevre: 200, vache: 140 },
+    { week: 'S35', maternel: 200, chevre: 440, vache: 200 },
+    { week: 'S38', maternel: 50, chevre: 640, vache: 150 },
+    { week: 'S41', maternel: 0, chevre: 840, vache: 0 },
+    { week: 'S44', maternel: 0, chevre: 820, vache: 0 },
   ];
 
   const renderGrowthChart = () => {
-    const data = omsData[growthType];
-    const unit = growthType === 'weight' ? 'kg' : 'cm';
-    const color = growthType === 'weight' ? '#2563eb' : growthType === 'height' ? '#16a34a' : '#9333ea';
+    // Couleurs ultra-saturées pour visibilité
+    const colors = {
+      weight: { line: "#0047FF", p50: "#00C851", p85: "#ffbb33", bg: "#f0f7ff" },
+      height: { line: "#007E33", p50: "#00C851", p85: "#ffbb33", bg: "#f1f8f1" },
+      head: { line: "#AA00FF", p50: "#00C851", p85: "#ffbb33", bg: "#f9f0ff" }
+    };
+    
+    const c = colors[growthType];
 
     return (
-      <div className="h-80 w-full">
+      <div className="h-96 w-full bg-white rounded-3xl p-2">
         <ResponsiveContainer>
-          <ComposedChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} />
-            <YAxis axisLine={false} tickLine={false} unit={unit} domain={['auto', 'auto']} />
-            <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-            <Legend verticalAlign="top" height={36}/>
-            <Area type="monotone" dataKey="p85" stroke="none" fill="#fee2e2" name="Zone Haute (P85)" fillOpacity={0.6} />
-            <Area type="monotone" dataKey="p50" stroke="none" fill="#dcfce7" name="Médiane (P50)" fillOpacity={0.6} />
-            <Line type="monotone" dataKey="current" stroke={color} strokeWidth={4} dot={{r: 6, fill: color, stroke: '#fff', strokeWidth: 2}} name={`Éléonore (${unit})`} />
+          <ComposedChart data={growthData[growthType]}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <XAxis dataKey="month" tick={{fill: '#475569', fontWeight: 'bold'}} />
+            <YAxis tick={{fill: '#475569'}} domain={['auto', 'auto']} />
+            <Tooltip contentStyle={{borderRadius: '15px', border: '2px solid #E2E8F0'}} />
+            <Legend verticalAlign="top" iconType="circle" />
+            {/* Zones Percentiles OMS avec couleurs plus marquées */}
+            <Area type="monotone" dataKey="p97" stroke="none" fill="#ff4444" fillOpacity={0.15} name="Zone Alerte Haute" />
+            <Area type="monotone" dataKey="p50" stroke="none" fill="#00C851" fillOpacity={0.2} name="Médiane OMS" />
+            <Line 
+              type="monotone" 
+              dataKey="current" 
+              stroke={c.line} 
+              strokeWidth={5} 
+              dot={{r: 8, fill: c.line, stroke: '#fff', strokeWidth: 3}} 
+              name={`Mesure Éléonore`} 
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -62,78 +58,60 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <nav className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 pb-20">
+      <nav className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-xl">
         <div className="flex items-center gap-3">
-          <Baby className="w-8 h-8 text-pink-500" />
-          <h1 className="text-xl font-bold">Éléonore Dashboard</h1>
+          <div className="bg-pink-500 p-2 rounded-lg">
+            <Baby className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-xl font-black uppercase tracking-tighter">Éléonore Intelligence</h1>
         </div>
-        <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md">
-          <Printer className="w-4 h-4 inline mr-2" /> PDF
-        </button>
+        <button onClick={() => window.print()} className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm">PDF</button>
       </nav>
 
-      <main className="max-w-5xl mx-auto p-4 md:p-8">
-        {/* TABS PRINCIPAUX */}
-        <div className="flex gap-2 mb-8 bg-slate-200/50 p-1 rounded-2xl w-fit">
-          <button onClick={() => setActiveTab('growth')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'growth' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Croissance</button>
-          <button onClick={() => setActiveTab('nutrition')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'nutrition' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Nutrition</button>
+      <main className="max-w-5xl mx-auto p-4 md:p-6">
+        {/* SÉLECTEUR DE MODE */}
+        <div className="flex bg-slate-200 p-1 rounded-2xl mb-6 shadow-inner">
+          <button onClick={() => setActiveTab('growth')} className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${activeTab === 'growth' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500'}`}>CROISSANCE</button>
+          <button onClick={() => setActiveTab('nutrition')} className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${activeTab === 'nutrition' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500'}`}>NUTRITION HEBDO</button>
         </div>
 
         {activeTab === 'growth' ? (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <TrendingUp className="text-blue-500" /> Comparaison Courbes OMS
-              </h3>
-              {renderGrowthChart()}
-            </div>
-
-            {/* BOUTONS INTERACTIFS EN BAS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button onClick={() => setGrowthType('weight')} className={`p-6 rounded-[24px] border-2 transition-all text-left ${growthType === 'weight' ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-white shadow-sm'}`}>
-                <Scale className="mb-2 text-blue-600" />
-                <p className="text-xs font-bold uppercase text-slate-400">Poids</p>
-                <p className="text-2xl font-black text-slate-800">7.8 kg</p>
+            {renderGrowthChart()}
+            <div className="grid grid-cols-3 gap-3">
+              <button onClick={() => setGrowthType('weight')} className={`p-4 rounded-2xl border-4 transition-all ${growthType === 'weight' ? 'border-blue-600 bg-white shadow-lg' : 'border-transparent opacity-60'}`}>
+                <Scale className="mx-auto mb-1 text-blue-600" />
+                <p className="text-[10px] font-bold text-center">POIDS</p>
               </button>
-              <button onClick={() => setGrowthType('height')} className={`p-6 rounded-[24px] border-2 transition-all text-left ${growthType === 'height' ? 'border-green-500 bg-green-50' : 'border-transparent bg-white shadow-sm'}`}>
-                <Ruler className="mb-2 text-green-600" />
-                <p className="text-xs font-bold uppercase text-slate-400">Taille</p>
-                <p className="text-2xl font-black text-slate-800">70 cm</p>
+              <button onClick={() => setGrowthType('height')} className={`p-4 rounded-2xl border-4 transition-all ${growthType === 'height' ? 'border-green-600 bg-white shadow-lg' : 'border-transparent opacity-60'}`}>
+                <Ruler className="mx-auto mb-1 text-green-600" />
+                <p className="text-[10px] font-bold text-center">TAILLE</p>
               </button>
-              <button onClick={() => setGrowthType('head')} className={`p-6 rounded-[24px] border-2 transition-all text-left ${growthType === 'head' ? 'border-purple-500 bg-purple-50' : 'border-transparent bg-white shadow-sm'}`}>
-                <Brain className="mb-2 text-purple-600" />
-                <p className="text-xs font-bold uppercase text-slate-400">Périmètre</p>
-                <p className="text-2xl font-black text-slate-800">43.8 cm</p>
+              <button onClick={() => setGrowthType('head')} className={`p-4 rounded-2xl border-4 transition-all ${growthType === 'head' ? 'border-purple-600 bg-white shadow-lg' : 'border-transparent opacity-60'}`}>
+                <Brain className="mx-auto mb-1 text-purple-600" />
+                <p className="text-[10px] font-bold text-center">TÊTE</p>
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-              <h3 className="text-lg font-bold mb-6">Répartition Mensuelle (Maternel / Chèvre / Vache)</h3>
-              <div className="h-80 w-full">
-                <ResponsiveContainer>
-                  <AreaChart data={nutritionHistory}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="period" />
-                    <YAxis unit="ml" />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="maternel" stackId="1" stroke="#ec4899" fill="#fbcfe8" name="Lait Maternel" fillOpacity={0.8} />
-                    <Area type="monotone" dataKey="chevre" stackId="1" stroke="#3b82f6" fill="#bfdbfe" name="Lait de Chèvre" fillOpacity={0.8} />
-                    <Area type="monotone" dataKey="vache" stackId="1" stroke="#64748b" fill="#e2e8f0" name="Lait de Vache" fillOpacity={0.8} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="bg-blue-600 text-white p-8 rounded-[32px] shadow-lg shadow-blue-200">
-               <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-bold flex items-center gap-2 text-lg"><Calendar className="w-5 h-5"/> Moyenne Hebdomadaire (Nov)</h4>
-                  <ChevronRight />
-               </div>
-               <div className="text-4xl font-black mb-2">840 ml <span className="text-lg font-normal opacity-70">/ jour</span></div>
-               <p className="text-blue-100 text-sm">Consommation 100% stable sur les 4 dernières semaines.</p>
+          <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200">
+            <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2 underline decoration-blue-500 underline-offset-8">
+              <Droplets className="text-blue-500" /> CONSOMMATION PAR SEMAINE
+            </h3>
+            <div className="h-96 w-full">
+              <ResponsiveContainer>
+                <AreaChart data={nutritionWeekly}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="week" tick={{fontWeight: 'bold'}} />
+                  <YAxis unit="ml" />
+                  <Tooltip cursor={{stroke: '#3b82f6', strokeWidth: 2}} />
+                  <Legend />
+                  <Area type="monotone" dataKey="maternel" stackId="1" stroke="#E91E63" fill="#F06292" fillOpacity={0.9} name="Maternel" />
+                  <Area type="monotone" dataKey="chevre" stackId="1" stroke="#0091EA" fill="#4FC3F7" fillOpacity={0.9} name="Chèvre" />
+                  <Area type="monotone" dataKey="vache" stackId="1" stroke="#455A64" fill="#90A4AE" fillOpacity={0.9} name="Vache" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}
@@ -142,7 +120,25 @@ const App = () => {
   );
 };
 
+// Données OMS simulées (en attendant ton fichier séparé)
+const growthData = {
+  weight: [
+    { month: 'Naiss.', current: 3.3, p50: 3.2, p97: 4.2 },
+    { month: 'M3', current: 5.8, p50: 5.8, p97: 7.2 },
+    { month: 'M6', current: 7.8, p50: 7.3, p97: 9.2 }
+  ],
+  height: [
+    { month: 'Naiss.', current: 50, p50: 49.1, p97: 52.9 },
+    { month: 'M6', current: 70, p50: 65.7, p97: 70.3 }
+  ],
+  head: [
+    { month: 'Naiss.', current: 34, p50: 33.9, p97: 35.9 },
+    { month: 'M6', current: 43.8, p50: 42.2, p97: 44.3 }
+  ]
+};
+
 export default App;
+
 
 
 
