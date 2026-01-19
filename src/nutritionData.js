@@ -1,4 +1,4 @@
-export const nutritionData = [
+export const detailedNutrition = [
   // --- JUILLET / AOÛT 2025 : Allaitement & Kabrita/Aptamil ---
   { date: "2025-07-29", sein: 770, maternelBib: 90, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
   { date: "2025-07-30", sein: 720, maternelBib: 180, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
@@ -186,4 +186,5 @@ export const nutritionData = [
   { date: "2026-01-18", kendamil: 920, franceLait: 0 },
   { date: "2026-01-19", kendamil: 915, franceLait: 0 }
 ];
+
 
