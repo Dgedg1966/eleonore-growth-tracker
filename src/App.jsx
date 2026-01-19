@@ -3,82 +3,35 @@ import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, ComposedChart } from 'recharts';
 import { Baby, Scale, Ruler, Brain, Printer, TrendingUp, Droplets } from 'lucide-react';
 
-// On importe les données officielles du fichier que tu viens de créer
+// On importe tes fichiers de données existants
 import { omsTables } from './omsData';
+import { nutritionData } from './nutritionData'; // Assure-toi que l'export dans ton fichier s'appelle nutritionData ou adapte ici
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('growth');
-  const [growthType, setGrowthType] = useState('weight'); // 'weight', 'height', ou 'head'
+  const [growthType, setGrowthType] = useState('weight');
 
-  // TES DONNÉES RÉELLES (À mettre à jour ici quand tu as de nouvelles mesures)
+  // TES MESURES DE CROISSANCE
   const myMeasures = {
-    weight: [
-      { month: 0, current: 3.3 },
-      { month: 1, current: 4.2 },
-      { month: 3, current: 5.8 },
-      { month: 6, current: 7.8 },
-    ],
-    height: [
-      { month: 0, current: 50 },
-      { month: 6, current: 70 },
-    ],
-    head: [
-      { month: 0, current: 34 },
-      { month: 6, current: 43.8 },
-    ]
+    weight: [{ month: 0, current: 3.3 }, { month: 1, current: 4.2 }, { month: 3, current: 5.8 }, { month: 6, current: 7.8 }],
+    height: [{ month: 0, current: 50 }, { month: 6, current: 70 }],
+    head: [{ month: 0, current: 34 }, { month: 6, current: 43.8 }]
   };
 
-  // FUSION DES DONNÉES OMS + TES MESURES
-  const chartData = omsTables[growthType].map(omsPoint => {
+  // Fusion pour le graphique de croissance
+  const growthChartData = omsTables[growthType].map(omsPoint => {
     const myPoint = myMeasures[growthType].find(m => m.month === omsPoint.month);
     return { ...omsPoint, current: myPoint ? myPoint.current : null };
   });
 
-  const renderGrowthChart = () => {
-    const config = {
-      weight: { color: "#0047FF", unit: "kg", label: "Poids" },
-      height: { color: "#00C851", unit: "cm", label: "Taille" },
-      head: { color: "#AA00FF", unit: "cm", label: "Périmètre" }
-    };
-    const active = config[growthType];
-
-    return (
-      <div className="h-[450px] w-full bg-white p-4 rounded-3xl border-2 border-slate-100">
-        <ResponsiveContainer>
-          <ComposedChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="month" label={{ value: 'Mois', position: 'insideBottom', offset: -5 }} />
-            <YAxis unit={active.unit} domain={['auto', 'auto']} />
-            <Tooltip />
-            <Legend verticalAlign="top" />
-            {/* Couloirs OMS très visibles */}
-            <Area type="monotone" dataKey="p97" stroke="none" fill="#ff4444" fillOpacity={0.1} name="Limite Haute" />
-            <Area type="monotone" dataKey="p50" stroke="none" fill="#00C851" fillOpacity={0.2} name="Médiane OMS" />
-            <Area type="monotone" dataKey="p3" stroke="none" fill="#ff4444" fillOpacity={0.1} name="Limite Basse" />
-            {/* Ta ligne d'Éléonore */}
-            <Line 
-              type="monotone" 
-              dataKey="current" 
-              stroke={active.color} 
-              strokeWidth={5} 
-              dot={{ r: 8, fill: active.color, stroke: '#fff', strokeWidth: 3 }} 
-              name={`Éléonore (${active.unit})`}
-              connectNulls 
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-10 font-sans">
       <nav className="bg-slate-900 text-white p-5 flex justify-between items-center shadow-2xl">
         <div className="flex items-center gap-3">
           <Baby className="text-pink-400 w-8 h-8" />
-          <h1 className="text-xl font-black italic">ÉLÉONORE TRACKER</h1>
+          <h1 className="text-xl font-black italic uppercase">Éléonore Analytics</h1>
         </div>
-        <button onClick={() => window.print()} className="bg-blue-600 px-4 py-2 rounded-xl font-bold text-sm">Rapport PDF</button>
+        <button onClick={() => window.print()} className="bg-blue-600 px-4 py-2 rounded-xl font-bold text-sm">EXPORT PDF</button>
       </nav>
 
       <main className="max-w-5xl mx-auto p-4">
@@ -89,30 +42,56 @@ const App = () => {
         </div>
 
         {activeTab === 'growth' ? (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {renderGrowthChart()}
-            
-            {/* BOUTONS DE SÉLECTION DE MESURE */}
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="h-[450px] w-full bg-white p-6 rounded-[40px] shadow-sm border border-slate-200">
+               <h3 className="text-lg font-black mb-4 flex items-center gap-2"><TrendingUp className="text-blue-500"/> Courbes de Percentiles OMS</h3>
+               <ResponsiveContainer>
+                <ComposedChart data={growthChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{fontWeight: 'bold'}} />
+                  <YAxis unit={growthType === 'weight' ? 'kg' : 'cm'} />
+                  <Tooltip />
+                  <Legend verticalAlign="top" />
+                  <Area type="monotone" dataKey="p97" stroke="none" fill="#ff4444" fillOpacity={0.15} name="P97 (Alerte)" />
+                  <Area type="monotone" dataKey="p50" stroke="none" fill="#00C851" fillOpacity={0.25} name="Médiane OMS" />
+                  <Area type="monotone" dataKey="p3" stroke="none" fill="#ff4444" fillOpacity={0.15} name="P3 (Alerte)" />
+                  <Line type="monotone" dataKey="current" stroke={growthType === 'weight' ? '#0047FF' : '#00C851'} strokeWidth={6} dot={{r: 8, fill: '#fff', strokeWidth: 4}} connectNulls name="Éléonore" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => setGrowthType('weight')} className={`p-6 rounded-[32px] border-4 transition-all text-center ${growthType === 'weight' ? 'border-blue-600 bg-white shadow-xl scale-105' : 'border-transparent bg-slate-100 opacity-50'}`}>
-                <Scale className="mx-auto mb-2 text-blue-600 w-8 h-8" />
-                <span className="font-black text-lg text-slate-800">7.8 kg</span>
+              <button onClick={() => setGrowthType('weight')} className={`p-6 rounded-[32px] border-4 transition-all ${growthType === 'weight' ? 'border-blue-600 bg-white' : 'border-transparent opacity-40 bg-slate-100'}`}>
+                <Scale className="mx-auto mb-2 text-blue-600 w-8 h-8" /><span className="font-black">7.8 kg</span>
               </button>
-              <button onClick={() => setGrowthType('height')} className={`p-6 rounded-[32px] border-4 transition-all text-center ${growthType === 'height' ? 'border-green-600 bg-white shadow-xl scale-105' : 'border-transparent bg-slate-100 opacity-50'}`}>
-                <Ruler className="mx-auto mb-2 text-green-600 w-8 h-8" />
-                <span className="font-black text-lg text-slate-800">70 cm</span>
+              <button onClick={() => setGrowthType('height')} className={`p-6 rounded-[32px] border-4 transition-all ${growthType === 'height' ? 'border-green-600 bg-white' : 'border-transparent opacity-40 bg-slate-100'}`}>
+                <Ruler className="mx-auto mb-2 text-green-600 w-8 h-8" /><span className="font-black">70 cm</span>
               </button>
-              <button onClick={() => setGrowthType('head')} className={`p-6 rounded-[32px] border-4 transition-all text-center ${growthType === 'head' ? 'border-purple-600 bg-white shadow-xl scale-105' : 'border-transparent bg-slate-100 opacity-50'}`}>
-                <Brain className="mx-auto mb-2 text-purple-600 w-8 h-8" />
-                <span className="font-black text-lg text-slate-800">43.8 cm</span>
+              <button onClick={() => setGrowthType('head')} className={`p-6 rounded-[32px] border-4 transition-all ${growthType === 'head' ? 'border-purple-600 bg-white' : 'border-transparent opacity-40 bg-slate-100'}`}>
+                <Brain className="mx-auto mb-2 text-purple-600 w-8 h-8" /><span className="font-black">43.8 cm</span>
               </button>
             </div>
           </div>
         ) : (
-          <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200 min-h-[500px]">
-             <h2 className="text-2xl font-black mb-6 flex items-center gap-3"><Droplets className="text-blue-500"/> Historique Nutritionnel</h2>
-             <p className="text-slate-500 italic mb-4">Chargement des données hebdomadaires (S29 - S03)...</p>
-             {/* Le graphique nutritionnel sera ici dès que j'aurai ton Excel */}
+          <div className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-200 animate-in fade-in duration-500">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-3"><Droplets className="text-blue-500"/> Détail de la Consommation</h3>
+            <div className="h-[500px] w-full">
+              <ResponsiveContainer>
+                <AreaChart data={nutritionData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" /> 
+                  <YAxis unit="ml" />
+                  <Tooltip />
+                  <Legend />
+                  {/* J'utilise ici les clés que l'on voit sur ton graphique (Allaitement, Kabrita, etc.) */}
+                  <Area type="monotone" dataKey="allaitement" stackId="1" stroke="#ec4899" fill="#fbcfe8" fillOpacity={0.8} name="Allaitement (Sein)" />
+                  <Area type="monotone" dataKey="maternel" stackId="1" stroke="#d946ef" fill="#f5d0fe" fillOpacity={0.8} name="Lait Maternel (Bib)" />
+                  <Area type="monotone" dataKey="kabrita" stackId="1" stroke="#eab308" fill="#fef08a" fillOpacity={0.8} name="Kabrita" />
+                  <Area type="monotone" dataKey="kendamil" stackId="1" stroke="#3b82f6" fill="#bfdbfe" fillOpacity={0.8} name="Kendamil" />
+                  <Area type="monotone" dataKey="vache" stackId="1" stroke="#64748b" fill="#e2e8f0" fillOpacity={0.8} name="Lait de Vache" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
       </main>
