@@ -3,7 +3,7 @@
 // Du 29 juillet 2025 au 19 janvier 2026 – 172 jours complets
 // Parsé selon tes règles : tétées pré-calculées, types via légende couleur, solides en g, totaux directs Excel
 
-export const nutritionData = [
+export const dailyNutrition = [
 
   // Juillet 2025
   {"date":"2025-07-29","feeds":[{"ml":60,"hour":"00:30","type":"aptamil"},{"ml":30,"hour":"01:30","type":"aptamil"},{"ml":90,"hour":"06:30","type":"aptamil"},{"ml":120,"hour":"09:00","type":"aptamil"},{"ml":90,"hour":"13:30","type":"aptamil"},{"ml":90,"hour":"16:30","type":"maternelBib"},{"ml":70,"hour":"20:00","type":"kabrita"}],"tetees_ml":0,"solides":[],"total_ml":550},
@@ -208,6 +208,7 @@ export const phases = {
   "Fin des tétées": "2025-11-10",
   "Fin lait maternel biberon": "2025-10-23"
 };
+
 
 
 
