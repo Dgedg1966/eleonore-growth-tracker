@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import { Baby, Scale, Ruler, Brain, Droplets, Plus } from 'lucide-react';
 import { omsTables, cdcTables } from './omsData';
-import { dailyNutrition } from './nutritionData';
+import { nutritionData } from './nutritionData';
 
 const App = () => {
   const [tab, setTab] = useState('growth');
@@ -189,6 +189,7 @@ const App = () => {
 };
 
 export default App;
+
 
 
 
