@@ -1,11 +1,11 @@
 export const dailyNutrition = [
   // --- JUILLET / AOÛT 2025 : Allaitement & Kabrita/Aptamil ---
-  { date: "2025-07-29", sein: 770, maternelBib: 90, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
-  { date: "2025-07-30", sein: 720, maternelBib: 180, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
-  { date: "2025-07-31", sein: 730, maternelBib: 120, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
-  { date: "2025-08-01", sein: 810, maternelBib: 150, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
-  { date: "2025-08-02", sein: 750, maternelBib: 90, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
-  { date: "2025-08-03", sein: 860, maternelBib: 150, kabrita: 0, aptamil: 0, kendamil: 0, franceLait: 0 },
+  { date: "2025-07-29", sein: 770, maternelBib: 90, kabrita: 0, aptamil: 0 },
+  { date: "2025-07-30", sein: 720, maternelBib: 180, kabrita: 0, aptamil: 0 },
+  { date: "2025-07-31", sein: 730, maternelBib: 120, kabrita: 0, aptamil: 0 },
+  { date: "2025-08-01", sein: 810, maternelBib: 150, kabrita: 0, aptamil: 0 },
+  { date: "2025-08-02", sein: 750, maternelBib: 90, kabrita: 0, aptamil: 0 },
+  { date: "2025-08-03", sein: 860, maternelBib: 150, kabrita: 0, aptamil: 0 },
   { date: "2025-08-04", sein: 180, maternelBib: 60, kabrita: 270, aptamil: 320, kendamil: 0, franceLait: 0 },
   { date: "2025-08-05", sein: 225, maternelBib: 90, kabrita: 515, aptamil: 0, kendamil: 0, franceLait: 0 },
   { date: "2025-08-06", sein: 270, maternelBib: 60, kabrita: 420, aptamil: 0, kendamil: 0, franceLait: 0 },
@@ -186,6 +186,7 @@ export const dailyNutrition = [
   { date: "2026-01-18", kendamil: 920, franceLait: 0 },
   { date: "2026-01-19", kendamil: 915, franceLait: 0 }
 ];
+
 
 
 
