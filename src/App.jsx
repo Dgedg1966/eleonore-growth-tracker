@@ -1,102 +1,186 @@
 // Ce code contient les corrections pour Éléonore
-import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend, ComposedChart } from 'recharts';
-import { Baby, Scale, Ruler, Brain, Printer, Droplets } from 'lucide-react';
-
-// Importation des fichiers que nous avons déjà générés
-import { omsTables } from './omsData';
-import { dailyNutrition } from './nutritionData'; // Ton fichier avec chaque jour
+import React, { useState, useEffect } from 'react';
+import { Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { Baby, Scale, Ruler, Brain, Droplets, Plus } from 'lucide-react';
+import { omsTables, cdcTables } from './omsData';
+import { dailyNutrition } from './nutritionData';
 
 const App = () => {
-  const [activeTab, setActiveTab] = useState('growth');
-  const [growthType, setGrowthType] = useState('weight');
+  const [tab, setTab] = useState('growth');
+  const [type, setType] = useState('weight');
+  const [standard, setStandard] = useState('oms'); // 'oms' ou 'cdc'
+  const [measures, setMeasures] = useState(() => {
+    const saved = localStorage.getItem('eleonoreMeasures');
+    return saved ? JSON.parse(saved) : {
+      weight: [{ month: 0, value: 3.3, date: '2025-07-29' }, { month: 6, value: 7.8, date: '2026-01-20' }],
+      height: [{ month: 0, value: 50, date: '2025-07-29' }, { month: 6, value: 70, date: '2026-01-20' }],
+      head:   [{ month: 0, value: 34, date: '2025-07-29' }, { month: 6, value: 43.8, date: '2026-01-20' }]
+    };
+  });
 
-  // TES MESURES DE CROISSANCE
-  const myMeasures = {
-    weight: [{ month: 0, current: 3.3 }, { month: 1, current: 4.2 }, { month: 3, current: 5.8 }, { month: 6, current: 7.8 }],
-    height: [{ month: 0, current: 50 }, { month: 6, current: 70 }],
-    head: [{ month: 0, current: 34 }, { month: 6, current: 43.8 }]
-  };
+  useEffect(() => {
+    localStorage.setItem('eleonoreMeasures', JSON.stringify(measures));
+  }, [measures]);
 
-  const combinedGrowth = omsTables[growthType].map(oms => ({
-    ...oms,
-    current: myMeasures[growthType].find(m => m.month === oms.month)?.current || null
+  const tables = standard === 'oms' ? omsTables : cdcTables;
+  const data = tables[type].map(row => ({
+    ...row,
+    eleonore: measures[type].find(m => m.month === row.month)?.value || null
   }));
 
+  const latest = measures[type][measures[type].length - 1];
+  const currentValue = latest?.value || '—';
+  const currentMonth = latest?.month || '—';
+
+  const approxPercentile = (val, month) => {
+    const row = tables[type].find(r => r.month === month) || tables[type][0];
+    const diff97 = row.p97 - row.p50;
+    const z = (val - row.p50) / (diff97 / 1.88);
+    const p = 50 + 50 * Math.tanh(z * 0.8); // approximation simple
+    return Math.max(1, Math.min(99, Math.round(p)));
+  };
+
+  const percentile = latest ? approxPercentile(currentValue, currentMonth) : '—';
+
+  const addMeasure = (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const date = form.date.value;
+    const val = parseFloat(form.value.value);
+    const birth = new Date('2025-07-29');
+    const measureDate = new Date(date);
+    const months = Math.round((measureDate - birth) / (1000 * 60 * 60 * 24 * 30.4));
+    const newEntry = { month: months, value: val, date };
+    setMeasures(prev => ({
+      ...prev,
+      [type]: [...prev[type], newEntry].sort((a,b) => a.month - b.month)
+    }));
+    form.reset();
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
-      <nav className="bg-slate-900 text-white p-5 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-3">
-          <Baby className="text-pink-400 w-8 h-8" />
-          <h1 className="text-xl font-black uppercase tracking-tighter">Éléonore Analytics</h1>
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white text-gray-900 font-sans">
+      <nav className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-5 shadow-xl">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Baby className="w-10 h-10" />
+            <h1 className="text-2xl font-bold">Éléonore Growth</h1>
+          </div>
+          <span className="text-sm opacity-90">Famille seulement</span>
         </div>
-        <button onClick={() => window.print()} className="bg-blue-600 px-4 py-2 rounded-lg font-bold text-sm">Rapport PDF</button>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-4">
-        {/* SÉLECTEUR D'ONGLET PRINCIPAL */}
-        <div className="flex bg-slate-200 p-1.5 rounded-2xl mb-8 w-fit mx-auto shadow-inner">
-          <button onClick={() => setActiveTab('growth')} className={`px-8 py-3 rounded-xl font-bold transition-all ${activeTab === 'growth' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>CROISSANCE</button>
-          <button onClick={() => setActiveTab('nutrition')} className={`px-8 py-3 rounded-xl font-bold transition-all ${activeTab === 'nutrition' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>NUTRITION</button>
+      <main className="max-w-6xl mx-auto p-6">
+        {/* Onglets */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-white rounded-full shadow-md p-1">
+            <button
+              onClick={() => setTab('growth')}
+              className={`px-8 py-3 rounded-full font-semibold transition ${tab === 'growth' ? 'bg-pink-600 text-white shadow' : 'text-gray-600 hover:bg-pink-50'}`}
+            >
+              Croissance
+            </button>
+            <button
+              onClick={() => setTab('nutrition')}
+              className={`px-8 py-3 rounded-full font-semibold transition ${tab === 'nutrition' ? 'bg-pink-600 text-white shadow' : 'text-gray-600 hover:bg-pink-50'}`}
+            >
+              Nutrition
+            </button>
+          </div>
         </div>
 
-        {activeTab === 'growth' ? (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 italic">Courbe de {growthType === 'weight' ? 'Poids' : growthType === 'height' ? 'Taille' : 'Périmètre'} vs Médiane OMS</h3>
-              <div className="h-[400px] w-full">
+        {tab === 'growth' && (
+          <div className="space-y-8">
+            {/* Sélecteurs */}
+            <div className="flex flex-wrap gap-4 justify-center">
+              <select
+                value={standard}
+                onChange={e => setStandard(e.target.value)}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white shadow-sm"
+              >
+                <option value="oms">OMS (recommandé 0-2 ans)</option>
+                <option value="cdc">CDC</option>
+              </select>
+
+              <div className="flex gap-3">
+                <button onClick={() => setType('weight')} className={`flex-1 p-4 rounded-xl shadow ${type==='weight' ? 'bg-pink-100 border-2 border-pink-500' : 'bg-white'}`}>
+                  <Scale className="mx-auto mb-2 text-pink-600" />
+                  <div className="font-bold">{currentValue} kg</div>
+                  <div className="text-sm text-gray-600">P {percentile}</div>
+                </button>
+                <button onClick={() => setType('height')} className={`flex-1 p-4 rounded-xl shadow ${type==='height' ? 'bg-green-100 border-2 border-green-500' : 'bg-white'}`}>
+                  <Ruler className="mx-auto mb-2 text-green-600" />
+                  <div className="font-bold">{currentValue} cm</div>
+                </button>
+                <button onClick={() => setType('head')} className={`flex-1 p-4 rounded-xl shadow ${type==='head' ? 'bg-purple-100 border-2 border-purple-500' : 'bg-white'}`}>
+                  <Brain className="mx-auto mb-2 text-purple-600" />
+                  <div className="font-bold">{currentValue} cm</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Graphique */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h2 className="text-xl font-bold mb-4 text-center">
+                Courbe {type === 'weight' ? 'Poids' : type === 'height' ? 'Taille' : 'Périmètre crânien'}
+              </h2>
+              <div className="h-80">
                 <ResponsiveContainer>
-                  <ComposedChart data={combinedGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="month" tick={{fontWeight: 'bold'}} />
-                    <YAxis domain={['auto', 'auto']} />
+                  <ComposedChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" label={{ value: 'Âge (mois)', position: 'insideBottom', offset: -5 }} />
+                    <YAxis />
                     <Tooltip />
                     <Legend verticalAlign="top" />
-                    {/* Zones OMS avec couleurs vives */}
-                    <Area type="monotone" dataKey="p97" stroke="none" fill="#FF5252" fillOpacity={0.2} name="Limite Haute (P97)" />
-                    <Area type="monotone" dataKey="p50" stroke="none" fill="#4CAF50" fillOpacity={0.3} name="Médiane (P50)" />
-                    <Area type="monotone" dataKey="p3" stroke="none" fill="#FF5252" fillOpacity={0.2} name="Limite Basse (P3)" />
-                    <Line type="monotone" dataKey="current" stroke="#2563eb" strokeWidth={5} dot={{r: 8, fill: '#2563eb', stroke: '#fff', strokeWidth: 3}} connectNulls name="Éléonore" />
+                    <Area dataKey="p97" fill="#fecaca" fillOpacity={0.3} stroke="none" name="P97" />
+                    <Area dataKey="p50" fill="#86efac" fillOpacity={0.4} stroke="none" name="Médiane" />
+                    <Area dataKey="p3"  fill="#fecaca" fillOpacity={0.3} stroke="none" name="P3" />
+                    <Line type="monotone" dataKey="eleonore" stroke="#ec4899" strokeWidth={4} dot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} name="Éléonore" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => setGrowthType('weight')} className={`p-6 rounded-3xl border-4 transition-all ${growthType === 'weight' ? 'border-blue-600 bg-white shadow-xl' : 'border-transparent bg-slate-100 opacity-60'}`}>
-                <Scale className="mx-auto mb-2 text-blue-600" />
-                <p className="font-black text-center text-lg">7.8 kg</p>
-              </button>
-              <button onClick={() => setGrowthType('height')} className={`p-6 rounded-3xl border-4 transition-all ${growthType === 'height' ? 'border-green-600 bg-white shadow-xl' : 'border-transparent bg-slate-100 opacity-60'}`}>
-                <Ruler className="mx-auto mb-2 text-green-600" />
-                <p className="font-black text-center text-lg">70 cm</p>
-              </button>
-              <button onClick={() => setGrowthType('head')} className={`p-6 rounded-3xl border-4 transition-all ${growthType === 'head' ? 'border-purple-600 bg-white shadow-xl' : 'border-transparent bg-slate-100 opacity-60'}`}>
-                <Brain className="mx-auto mb-2 text-purple-600" />
-                <p className="font-black text-center text-lg">43.8 cm</p>
-              </button>
+
+            {/* Ajouter mesure */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Plus className="w-5 h-5" /> Ajouter une mesure
+              </h3>
+              <form onSubmit={addMeasure} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <input type="date" name="date" required className="p-3 border rounded-lg" />
+                <input type="number" name="value" step="0.1" placeholder="Valeur" required className="p-3 border rounded-lg" />
+                <button type="submit" className="bg-pink-600 text-white font-semibold py-3 rounded-lg hover:bg-pink-700 transition">
+                  Enregistrer
+                </button>
+              </form>
             </div>
           </div>
-        ) : (
-          <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200">
-            <h3 className="text-xl font-black mb-6 flex items-center gap-3"><Droplets className="text-blue-500" /> Historique Quotidien Complet</h3>
-            <div className="h-[500px] w-full">
+        )}
+
+        {tab === 'nutrition' && (
+          <div className="bg-white rounded-2xl shadow-xl p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
+              <Droplets className="text-blue-500" /> Nutrition quotidienne
+            </h2>
+            <div className="h-96">
               <ResponsiveContainer>
-                <AreaChart data={dailyNutrition}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" hide={false} tick={{fontSize: 10}} interval={7} />
-                  <YAxis unit="ml" />
+                <ComposedChart data={dailyNutrition.slice(-60)} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={70} interval={3} tick={{ fontSize: 12 }} />
+                  <YAxis unit=" ml" />
                   <Tooltip />
                   <Legend />
-                  {/* Tous tes laits avec couleurs saturées */}
-                  <Area type="monotone" dataKey="allaitement" stackId="1" stroke="#D81B60" fill="#F06292" fillOpacity={0.9} name="Allaitement (Sein)" />
-                  <Area type="monotone" dataKey="maternelBib" stackId="1" stroke="#E91E63" fill="#F48FB1" fillOpacity={0.8} name="Lait Maternel (Bib)" />
-                  <Area type="monotone" dataKey="kabrita" stackId="1" stroke="#FF8F00" fill="#FFD54F" fillOpacity={0.9} name="Kabrita" />
-                  <Area type="monotone" dataKey="kendamil" stackId="1" stroke="#1565C0" fill="#64B5F6" fillOpacity={0.9} name="Kendamil" />
-                  <Area type="monotone" dataKey="vache" stackId="1" stroke="#455A64" fill="#B0BEC5" fillOpacity={0.9} name="Lait de Vache" />
-                </AreaChart>
+                  <Area type="monotone" dataKey="sein" stackId="1" fill="#ec4899" stroke="#db2777" name="Sein" />
+                  <Area type="monotone" dataKey="maternelBib" stackId="1" fill="#f472b6" stroke="#db2777" name="Bib maternel" />
+                  <Area type="monotone" dataKey="kabrita" stackId="1" fill="#fbbf24" stroke="#d97706" name="Kabrita" />
+                  <Area type="monotone" dataKey="kendamil" stackId="1" fill="#60a5fa" stroke="#2563eb" name="Kendamil" />
+                  <Area type="monotone" dataKey="franceLait" stackId="1" fill="#9ca3af" stroke="#4b5563" name="France Lait" />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <p className="text-center mt-4 text-gray-600">
+              Données du {dailyNutrition[0]?.date} au {dailyNutrition[dailyNutrition.length-1]?.date}
+            </p>
           </div>
         )}
       </main>
