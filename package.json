@@ -1,7 +1,7 @@
 {
   "name": "eleonore-growth-tracker",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,8 +15,6 @@
     "lucide-react": "^0.294.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.3",
     "luxon": "^3.5.0",
     "vite-plugin-pwa": "^0.20.0"
   },
@@ -25,9 +23,12 @@
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5"
   }
 }
+
 
 
 
