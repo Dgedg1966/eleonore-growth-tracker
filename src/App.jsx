@@ -23,9 +23,9 @@ import {
 
 import NutritionDashboard from "./NutritionDashboard";
 
-/* ------------------------------------------------------------------ */
-/*  HELPERS – conversion du percentile (identique à votre version)   */
-/* ------------------------------------------------------------------ */
+/* -----------------------------------------------------------------
+   Helper – calcul du percentile (identique à votre version précédente)
+   ----------------------------------------------------------------- */
 const computePercentile = (latest, tables, growthType) => {
   if (!latest) return 0;
   const ref = tables[growthType][latest.month];
@@ -34,17 +34,17 @@ const computePercentile = (latest, tables, growthType) => {
   const p97 = ref.p97;
   const diff = p97 - p50 || 1; // éviter division par zéro
   const z = (latest.current - p50) / diff;
-  // Approximation simple (0‑100 %) → on ramène à 50‑100 %
+  // Approximation simple → on ramène à 50‑100 %
   const perc = Math.round(50 + 50 * Math.tanh(z));
   return Math.max(0, Math.min(100, perc));
 };
 
-/* ------------------------------------------------------------------ */
-/*  MAIN COMPONENT                                                   */
-/* ------------------------------------------------------------------ */
+/* -----------------------------------------------------------------
+   Main component
+   ----------------------------------------------------------------- */
 export default function App() {
-  /* ---------- STATE ---------- */
-  const [activeTab, setActiveTab] = useState("growth"); // growth | nutrition
+  /* ---------- UI state ---------- */
+  const [activeTab, setActiveTab] = useState("growth"); // "growth" | "nutrition"
   const [growthType, setGrowthType] = useState("weight"); // weight | height | head
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
@@ -56,6 +56,7 @@ export default function App() {
 
   const [dailyNutrition, setDailyNutrition] = useState([]);
   const [weeklyAverage, setWeeklyAverage] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -63,10 +64,10 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // ------- CROISSANCE -------
+        /* ---- CROISSANCE ---- */
         const growthResp = await fetch(
           "https://YOUR_BACKEND_URL_ON_RENDER.com/growth"
-        ); // <-- remplacez par votre URL Render
+        );
         if (!growthResp.ok) throw new Error("Growth endpoint failed");
         const growthData = await growthResp.json();
 
@@ -91,14 +92,21 @@ export default function App() {
         });
         setMyMeasures(measures);
 
-        // ------- NUTRITION -------
-        const nutriResp = await fetch(
+        /* ---- NUTRITION ---- */
+        const nutritionResp = await fetch(
           "https://YOUR_BACKEND_URL_ON_RENDER.com/nutrition"
         );
-        if (!nutriResp.ok) throw new Error("Nutrition endpoint failed");
-        const nutriJson = await nutriResp.json();
-        setDailyNutrition(nutriJson.entries || []);
-        setWeeklyAverage(nutriJson.weekly_average ?? null);
+        if (!nutritionResp.ok) throw new Error("Nutrition endpoint failed");
+        const nutritionJson = await nutritionResp.json();
+
+        // nutritionJson.entries = tableau des prises
+        // nutritionJson.weekly_average = moyenne hebdo (ou null)
+        setDailyNutrition(nutritionJson.entries || []);
+        setWeeklyAverage(
+          nutritionJson.weekly_average !== undefined
+            ? nutritionJson.weekly_average
+            : null
+        );
       } catch (e) {
         console.error(e);
         setErrorMsg(
@@ -112,25 +120,32 @@ export default function App() {
     fetchAll();
   }, []);
 
-  /* ---------- TABLEAU DE CROISSANCE (OMS / CDC) ---------- */
+  /* ---------- PREPARATION DES DONNEES DE CROISSANCE ---------- */
+  // Tables de référence (OMS ou CDC) – importées depuis votre fichier growthData.js
   const tables =
     chartStandard === "oms"
       ? require("./growthData").omsTables
       : require("./growthData").cdcTables;
 
+  // Données combinées (tables + mesures utilisateur) pour le graphe
   const combinedGrowth = tables[growthType].map((ref) => {
-    const measure = myMeasures[growthType].find((m) => m.month === ref.month);
+    const measure = myMeasures[growthType].find(
+      (m) => m.month === ref.month
+    );
     return {
       ...ref,
       current: measure ? measure.current : null,
     };
   });
 
-  const latest = myMeasures[growthType][myMeasures[growthType].length - 1] || {
-    current: 0,
-    month: 0,
-  };
-  const percentile = computePercentile(latest, tables, growthType);
+  const latest =
+    myMeasures[growthType][myMeasures[growthType].length - 1] ||
+    { current: 0, month: 0 };
+  const percentile = computePercentile(
+    latest,
+    tables,
+    growthType
+  );
 
   /* ---------- RENDER ---------- */
   if (loading) {
@@ -151,7 +166,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900">
-      {/* ----------------- NAVBAR ----------------- */}
+      {/* ------------------- NAVBAR ------------------- */}
       <nav className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-5 shadow-xl">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -164,9 +179,9 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ----------------- MAIN CONTENT ----------------- */}
+      {/* ------------------- MAIN ------------------- */}
       <main className="max-w-6xl mx-auto p-6">
-        {/* ------- Onglet switch ------- */}
+        {/* ------- Tab selector ------- */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex bg-white rounded-full shadow-md p-1">
             <button
@@ -195,7 +210,7 @@ export default function App() {
         {/* ==================== CROISSANCE ==================== */}
         {activeTab === "growth" && (
           <div className="space-y-8">
-            {/* ------ Sélecteur OMS / CDC ------ */}
+            {/* ---- Standard selector (OMS / CDC) ---- */}
             <select
               value={chartStandard}
               onChange={(e) => setChartStandard(e.target.value)}
@@ -205,7 +220,7 @@ export default function App() {
               <option value="cdc">CDC</option>
             </select>
 
-            {/* ------ Boutons de type de mesure ------ */}
+            {/* ---- Buttons for weight / height / head ---- */}
             <div className="flex flex-wrap gap-4 justify-center">
               <button
                 onClick={() => setGrowthType("weight")}
@@ -217,7 +232,7 @@ export default function App() {
               >
                 <Scale className="mx-auto mb-2 text-pink-600" size={32} />
                 <div className="font-bold text-xl">
-                  {latest.current} kg
+                  {latest.current} kg
                 </div>
                 <div className="text-sm text-gray-600">
                   P {percentile}
@@ -234,7 +249,7 @@ export default function App() {
               >
                 <Ruler className="mx-auto mb-2 text-green-600" size={32} />
                 <div className="font-bold text-xl">
-                  {latest.current} cm
+                  {latest.current} cm
                 </div>
               </button>
 
@@ -248,12 +263,12 @@ export default function App() {
               >
                 <Brain className="mx-auto mb-2 text-purple-600" size={32} />
                 <div className="font-bold text-xl">
-                  {latest.current} cm
+                  {latest.current} cm
                 </div>
               </button>
             </div>
 
-            {/* ------ Graphique de la courbe ------ */}
+            {/* ---- Chart ---- */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h2 className="text-xl font-bold mb-4 text-center">
                 Courbe{" "}
@@ -320,7 +335,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* ------ Formulaire d’ajout d’une mesure (optionnel) ------ */}
+            {/* ---- Add measurement form (optional) ---- */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <Plus className="w-5 h-5" /> Ajouter une mesure
@@ -328,8 +343,8 @@ export default function App() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  // Vous pouvez garder cette partie si vous voulez
-                  // persister les nouvelles mesures côté client.
+                  // Vous pouvez conserver cette logique si vous voulez
+                  // stocker les nouvelles mesures côté client.
                 }}
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4"
               >
@@ -365,17 +380,10 @@ export default function App() {
               <Droplets className="text-blue-500" /> Nutrition quotidienne
             </h2>
 
-            {/* Si vous avez déjà un composant NutritionDashboard qui attend
-                `nutritionData` sous forme de tableau, on le ré‑utilise ici. */}
-            {dailyNutrition.length > 0 ? (
-              <NutritionDashboard nutritionData={dailyNutrition} />
-            ) : (
-              <p className="text-center text-gray-500 py-10">
-                Aucune donnée nutritionnelle disponible.
-              </p>
-            )}
+            {/* Passer les données récupérées au composant */}
+            <NutritionDashboard nutritionData={dailyNutrition} />
 
-            {/* Affichage de la moyenne hebdomadaire (facultatif) */}
+            {/* Affichage facultatif de la moyenne hebdomadaire */}
             {weeklyAverage !== null && (
               <p className="mt-4 text-center text-gray-700">
                 Moyenne quotidienne de la semaine :{" "}
