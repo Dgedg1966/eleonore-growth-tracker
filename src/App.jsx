@@ -34,7 +34,6 @@ const computePercentile = (latest, tables, growthType) => {
   const p97 = ref.p97;
   const diff = p97 - p50 || 1; // éviter division par zéro
   const z = (latest.current - p50) / diff;
-  // Approximation simple → on ramène à 50‑100 %
   const perc = Math.round(50 + 50 * Math.tanh(z));
   return Math.max(0, Math.min(100, perc));
 };
@@ -48,6 +47,7 @@ export default function App() {
   const [growthType, setGrowthType] = useState("weight"); // weight | height | head
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
+  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] }); // will hold both sets
   const [myMeasures, setMyMeasures] = useState({
     weight: [],
     height: [],
@@ -60,18 +60,42 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  /* ---------- FETCH DATA ON MOUNT ---------- */
+  /* ---------- BACKEND URL ----------
+     Replace with your real backend URL or set REACT_APP_BACKEND_URL
+  ----------------------------------------------------------------- */
+  const BACKEND_URL =
+    process.env.REACT_APP_BACKEND_URL ||
+    "https://YOUR_BACKEND_URL_ON_RENDER.com";
+
+  /* -----------------------------------------------------------------
+     1️⃣ Load growth tables (dynamic import) whenever chartStandard changes
+     ----------------------------------------------------------------- */
+  useEffect(() => {
+    // Dynamic import – works in the browser and returns a promise
+    const loadTables = async () => {
+      try {
+        const mod = await import("./growthData"); // contains omsTables & cdcTables
+        setTables(mod); // keep both tables, we’ll pick the right one later
+      } catch (e) {
+        console.error("Failed to load growth tables:", e);
+        setErrorMsg("Impossible de charger les courbes de croissance.");
+      }
+    };
+    loadTables();
+  }, []); // runs once at mount (tables don’t change at runtime)
+
+  /* -----------------------------------------------------------------
+     2️⃣ Fetch growth & nutrition data from the Flask backend
+     ----------------------------------------------------------------- */
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        /* ---- CROISSANCE ---- */
-        const growthResp = await fetch(
-          "https://YOUR_BACKEND_URL_ON_RENDER.com/growth"
-        );
+        // --------- CROISSANCE ----------
+        const growthResp = await fetch(`${BACKEND_URL}/growth`);
         if (!growthResp.ok) throw new Error("Growth endpoint failed");
         const growthData = await growthResp.json();
 
-        // Réorganiser les mesures par type
+        // Organise les mesures par type (weight / height / head)
         const measures = { weight: [], height: [], head: [] };
         growthData.forEach((row) => {
           const date = new Date(row.date).toISOString().split("T")[0];
@@ -92,15 +116,11 @@ export default function App() {
         });
         setMyMeasures(measures);
 
-        /* ---- NUTRITION ---- */
-        const nutritionResp = await fetch(
-          "https://YOUR_BACKEND_URL_ON_RENDER.com/nutrition"
-        );
+        // --------- NUTRITION ----------
+        const nutritionResp = await fetch(`${BACKEND_URL}/nutrition`);
         if (!nutritionResp.ok) throw new Error("Nutrition endpoint failed");
         const nutritionJson = await nutritionResp.json();
 
-        // nutritionJson.entries = tableau des prises
-        // nutritionJson.weekly_average = moyenne hebdo (ou null)
         setDailyNutrition(nutritionJson.entries || []);
         setWeeklyAverage(
           nutritionJson.weekly_average !== undefined
@@ -118,17 +138,14 @@ export default function App() {
     };
 
     fetchAll();
-  }, []);
+  }, [BACKEND_URL]);
 
-  /* ---------- PREPARATION DES DONNEES DE CROISSANCE ---------- */
-  // Tables de référence (OMS ou CDC) – importées depuis votre fichier growthData.js
-  const tables =
-    chartStandard === "oms"
-      ? require("./growthData").omsTables
-      : require("./growthData").cdcTables;
+  /* -----------------------------------------------------------------
+     3️⃣ Prepare data for the growth chart (choose OMS or CDC)
+     ----------------------------------------------------------------- */
+  const selectedTables = chartStandard === "oms" ? tables.omsTables : tables.cdcTables;
 
-  // Données combinées (tables + mesures utilisateur) pour le graphe
-  const combinedGrowth = tables[growthType].map((ref) => {
+  const combinedGrowth = selectedTables?.map((ref) => {
     const measure = myMeasures[growthType].find(
       (m) => m.month === ref.month
     );
@@ -136,18 +153,16 @@ export default function App() {
       ...ref,
       current: measure ? measure.current : null,
     };
-  });
+  }) ?? [];
 
   const latest =
     myMeasures[growthType][myMeasures[growthType].length - 1] ||
     { current: 0, month: 0 };
-  const percentile = computePercentile(
-    latest,
-    tables,
-    growthType
-  );
+  const percentile = computePercentile(latest, selectedTables || {}, growthType);
 
-  /* ---------- RENDER ---------- */
+  /* -----------------------------------------------------------------
+     4️⃣ Render
+     ----------------------------------------------------------------- */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -343,7 +358,7 @@ export default function App() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  // Vous pouvez conserver cette logique si vous voulez
+                  // Vous pouvez garder cette logique si vous voulez
                   // stocker les nouvelles mesures côté client.
                 }}
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4"
