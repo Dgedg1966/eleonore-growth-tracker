@@ -1,7 +1,15 @@
-// Tables de croissance OMS & CDC - Filles (0 à 24 mois)
-// OMS : Source WHO Child Growth Standards
-// CDC : Source CDC 2000 z-score files (percentiles smoothed)
+// src/growthData.js
+// -------------------------------------------------------------
+// Growth reference tables (OMS & CDC) – Girls, 0‑24 months
+// -------------------------------------------------------------
+// • OMS tables come from the WHO Child Growth Standards (full set of percentiles)
+// • CDC tables come from the CDC 2000 growth charts (p3, p50, p97 are provided)
+//   – For CDC we keep the three official percentiles; the others are not published.
+// -------------------------------------------------------------
 
+/* -----------------------------------------------------------------
+   OMS – complete percentile set (p3, p15, p50, p85, p97)
+   ----------------------------------------------------------------- */
 export const omsTables = {
   weight: [
     { month: 0, p3: 2.4, p15: 2.8, p50: 3.2, p85: 3.7, p97: 4.2 },
@@ -20,6 +28,7 @@ export const omsTables = {
     { month: 18, p3: 8.1, p15: 9.1, p50: 10.2, p85: 11.6, p97: 13.2 },
     { month: 24, p3: 9.0, p15: 10.2, p50: 11.5, p85: 13.0, p97: 14.8 }
   ],
+
   height: [
     { month: 0, p3: 46.1, p15: 47.7, p50: 49.1, p85: 51.0, p97: 52.9 },
     { month: 1, p3: 50.0, p15: 51.7, p50: 53.7, p85: 55.6, p97: 57.6 },
@@ -33,6 +42,7 @@ export const omsTables = {
     { month: 18, p3: 74.9, p15: 77.2, p50: 80.0, p85: 82.8, p97: 85.6 },
     { month: 24, p3: 80.0, p15: 82.5, p50: 85.7, p85: 88.8, p97: 91.9 }
   ],
+
   head: [
     { month: 0, p3: 31.7, p15: 32.7, p50: 33.9, p85: 35.1, p97: 36.1 },
     { month: 1, p3: 33.9, p15: 34.8, p50: 36.1, p85: 37.3, p97: 38.3 },
@@ -48,9 +58,12 @@ export const omsTables = {
   ]
 };
 
+/* -----------------------------------------------------------------
+   CDC – percentiles that are officially published (p3, p50, p97)
+   ----------------------------------------------------------------- */
 export const cdcTables = {
   weight: [
-    { month: 0, p3: 2.4, p50: 3.4, p97: 4.3 },
+    { month: 0,   p3: 2.4, p50: 3.4, p97: 4.3 },
     { month: 0.5, p3: 2.8, p50: 3.8, p97: 4.7 },
     { month: 1.5, p3: 3.4, p50: 4.5, p97: 5.7 },
     { month: 2.5, p3: 4.0, p50: 5.2, p97: 6.5 },
@@ -77,8 +90,9 @@ export const cdcTables = {
     { month: 23.5, p3: 9.9, p50: 12.0, p97: 14.9 },
     { month: 24.5, p3: 10.0, p50: 12.1, p97: 15.1 }
   ],
+
   height: [
-    { month: 0, p3: 45.1, p50: 49.3, p97: 54.5 },
+    { month: 0,   p3: 45.1, p50: 49.3, p97: 54.5 },
     { month: 0.5, p3: 47.5, p50: 51.7, p97: 56.6 },
     { month: 1.5, p3: 51.0, p50: 55.3, p97: 60.0 },
     { month: 2.5, p3: 53.6, p50: 58.1, p97: 62.7 },
@@ -105,17 +119,6 @@ export const cdcTables = {
     { month: 23.5, p3: 78.8, p50: 85.3, p97: 91.9 },
     { month: 24.5, p3: 79.6, p50: 86.2, p97: 92.8 }
   ],
-  head: [  // Approximées de CDC, similaires à OMS pour 0-2 ans
-    { month: 0, p3: 31.7, p50: 34.5, p97: 37.3 },
-    { month: 1, p3: 34.0, p50: 36.5, p97: 39.5 },
-    { month: 2, p3: 35.6, p50: 38.1, p97: 41.1 },
-    { month: 3, p3: 36.9, p50: 39.4, p97: 42.4 },
-    { month: 4, p3: 38.0, p50: 40.5, p97: 43.5 },
-    { month: 5, p3: 38.9, p50: 41.5, p97: 44.5 },
-    { month: 6, p3: 39.8, p50: 42.4, p97: 45.4 },
-    { month: 9, p3: 41.3, p50: 44.0, p97: 47.1 },
-    { month: 12, p3: 42.6, p50: 45.3, p97: 48.4 },
-    { month: 18, p3: 44.1, p50: 46.8, p97: 50.0 },
-    { month: 24, p3: 45.2, p50: 47.9, p97: 51.1 }
-  ]
-};
+
+  head: [
+    // CDC does not publish the full set of percentiles for
