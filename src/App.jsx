@@ -24,7 +24,7 @@ import {
 import NutritionDashboard from "./NutritionDashboard";
 
 /* -----------------------------------------------------------------
-   Helper – calcul du percentile (identique à votre version précédente)
+   Helper – calculate the percentile (same logic you used before)
    ----------------------------------------------------------------- */
 const computePercentile = (latest, tables, growthType) => {
   if (!latest) return 0;
@@ -32,7 +32,7 @@ const computePercentile = (latest, tables, growthType) => {
   if (!ref) return 0;
   const p50 = ref.p50;
   const p97 = ref.p97;
-  const diff = p97 - p50 || 1; // éviter division par zéro
+  const diff = p97 - p50 || 1; // avoid division by zero
   const z = (latest.current - p50) / diff;
   const perc = Math.round(50 + 50 * Math.tanh(z));
   return Math.max(0, Math.min(100, perc));
@@ -47,7 +47,7 @@ export default function App() {
   const [growthType, setGrowthType] = useState("weight"); // weight | height | head
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
-  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] }); // will hold both sets
+  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] }); // will be filled by dynamic import
   const [myMeasures, setMyMeasures] = useState({
     weight: [],
     height: [],
@@ -60,29 +60,30 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  /* ---------- BACKEND URL ----------
-     Replace with your real backend URL or set REACT_APP_BACKEND_URL
+  /* ---------- Backend URL ----------
+     Put your real backend URL here or define REACT_APP_BACKEND_URL
   ----------------------------------------------------------------- */
   const BACKEND_URL =
     process.env.REACT_APP_BACKEND_URL ||
     "https://YOUR_BACKEND_URL_ON_RENDER.com";
 
   /* -----------------------------------------------------------------
-     1️⃣ Load growth tables (dynamic import) whenever chartStandard changes
+     1️⃣ Load growth tables (dynamic import) – runs once at mount
      ----------------------------------------------------------------- */
   useEffect(() => {
-    // Dynamic import – works in the browser and returns a promise
     const loadTables = async () => {
       try {
         const mod = await import("./growthData"); // contains omsTables & cdcTables
-        setTables(mod); // keep both tables, we’ll pick the right one later
+        setTables(mod);
       } catch (e) {
         console.error("Failed to load growth tables:", e);
-        setErrorMsg("Impossible de charger les courbes de croissance.");
+        setErrorMsg(
+          "Impossible de charger les courbes de croissance. Veuillez réessayer plus tard."
+        );
       }
     };
     loadTables();
-  }, []); // runs once at mount (tables don’t change at runtime)
+  }, []); // empty deps → run only once
 
   /* -----------------------------------------------------------------
      2️⃣ Fetch growth & nutrition data from the Flask backend
@@ -90,33 +91,33 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // --------- CROISSANCE ----------
+        /* --------- CROISSANCE --------- */
         const growthResp = await fetch(`${BACKEND_URL}/growth`);
         if (!growthResp.ok) throw new Error("Growth endpoint failed");
         const growthData = await growthResp.json();
 
-        // Organise les mesures par type (weight / height / head)
+        // Re‑organise measures by type
         const measures = { weight: [], height: [], head: [] };
         growthData.forEach((row) => {
-          const date = new Date(row.date).toISOString().split("T")[0];
+          const isoDate = new Date(row.date).toISOString().split("T")[0];
           const month = Math.round(
-            (new Date(date) - new Date("2025-05-14")) /
+            (new Date(isoDate) - new Date("2025-05-14")) /
               (1000 * 60 * 60 * 24 * 30.4)
           );
 
           if (row.weight !== undefined) {
-            measures.weight.push({ month, current: row.weight, date });
+            measures.weight.push({ month, current: row.weight, date: isoDate });
           }
           if (row.height !== undefined) {
-            measures.height.push({ month, current: row.height, date });
+            measures.height.push({ month, current: row.height, date: isoDate });
           }
           if (row.head !== undefined) {
-            measures.head.push({ month, current: row.head, date });
+            measures.head.push({ month, current: row.head, date: isoDate });
           }
         });
         setMyMeasures(measures);
 
-        // --------- NUTRITION ----------
+        /* --------- NUTRITION --------- */
         const nutritionResp = await fetch(`${BACKEND_URL}/nutrition`);
         if (!nutritionResp.ok) throw new Error("Nutrition endpoint failed");
         const nutritionJson = await nutritionResp.json();
@@ -141,11 +142,12 @@ export default function App() {
   }, [BACKEND_URL]);
 
   /* -----------------------------------------------------------------
-     3️⃣ Prepare data for the growth chart (choose OMS or CDC)
+     3️⃣ Prepare data for the growth chart (pick OMS or CDC)
      ----------------------------------------------------------------- */
-  const selectedTables = chartStandard === "oms" ? tables.omsTables : tables.cdcTables;
+  const selectedTables =
+    chartStandard === "oms" ? tables.omsTables : tables.cdcTables;
 
-  const combinedGrowth = selectedTables?.map((ref) => {
+  const combinedGrowth = (selectedTables || []).map((ref) => {
     const measure = myMeasures[growthType].find(
       (m) => m.month === ref.month
     );
@@ -153,7 +155,7 @@ export default function App() {
       ...ref,
       current: measure ? measure.current : null,
     };
-  }) ?? [];
+  });
 
   const latest =
     myMeasures[growthType][myMeasures[growthType].length - 1] ||
@@ -395,10 +397,10 @@ export default function App() {
               <Droplets className="text-blue-500" /> Nutrition quotidienne
             </h2>
 
-            {/* Passer les données récupérées au composant */}
+            {/* Pass the fetched data to the dashboard */}
             <NutritionDashboard nutritionData={dailyNutrition} />
 
-            {/* Affichage facultatif de la moyenne hebdomadaire */}
+            {/* Optional weekly average display */}
             {weeklyAverage !== null && (
               <p className="mt-4 text-center text-gray-700">
                 Moyenne quotidienne de la semaine :{" "}
