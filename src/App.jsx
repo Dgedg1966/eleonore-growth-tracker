@@ -47,7 +47,9 @@ export default function App() {
   const [growthType, setGrowthType] = useState("weight"); // weight | height | head
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
-  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] }); // will be filled by dynamic import
+  // Will receive { omsTables, cdcTables } from the dynamic import
+  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] });
+
   const [myMeasures, setMyMeasures] = useState({
     weight: [],
     height: [],
@@ -147,6 +149,7 @@ export default function App() {
   const selectedTables =
     chartStandard === "oms" ? tables.omsTables : tables.cdcTables;
 
+  // Guard against the moment when the tables are still loading
   const combinedGrowth = (selectedTables || []).map((ref) => {
     const measure = myMeasures[growthType].find(
       (m) => m.month === ref.month
@@ -413,6 +416,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
