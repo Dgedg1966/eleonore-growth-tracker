@@ -1,13 +1,28 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- Mobile responsiveness -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Éléonore's Growth Tracker</title>
+    <!-- Page title -->
+    <title>Éléonore Growth Tracker</title>
+
+    <!-- Vite injects the compiled CSS automatically.
+         The following tag is a placeholder that Vite replaces
+         with the correct <link> during development and build. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Optional: set a theme colour for browsers on mobile -->
+    <meta name="theme-color" content="#ffffff" />
   </head>
-  <body>
+
+  <body class="bg-gray-100">
+    <!-- This is where the React app will be mounted -->
     <div id="root"></div>
+
+    <!-- Vite injects the compiled JavaScript bundle.
+         The %...% placeholders are replaced by Vite at build/runtime. -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
