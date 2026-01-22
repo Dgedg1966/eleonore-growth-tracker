@@ -9,13 +9,35 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,          // <-- ajouté
 } from "recharts";
 
-/**
- * Props attendues :
- *   nutritionData : tableau d’objets
- *   (ex. [{date:"2025-07-29", feeds:[…], tetees_ml:0, solides:[], total_ml:550}, …])
- */
+/* -------------------------------------------------
+   Phases d’alimentation d’Éléonore (dates au format ISO)
+   ------------------------------------------------- */
+const phases = [
+  { label: "Intro Kabrita (Chèvre)",      date: "2025-07-29" },
+  { label: "Fin Kabrita (Chèvre)",        date: "2025-08-09" },
+  { label: "Transition Kendamil (Chèvre)",date: "2025-08-13" },
+
+  { label: "Intro Aptamil (Vache)",       date: "2025-07-29" },
+  { label: "Fin Aptamil (Vache)",         date: "2025-11-14" },
+
+  { label: "Intro Kendamil (Chèvre)",     date: "2025-11-11" },
+  { label: "Fin Kendamil (Chèvre)",       date: "2026-01-19" },
+
+  { label: "Intro France Lait",           date: "2025-12-16" },
+
+  { label: "Intro Solides",               date: "2025-12-02" },
+
+  { label: "Fin des tétées",              date: "2025-11-10" },
+  { label: "Fin lait maternel (biberon)", date: "2025-10-23" }
+];
+
+/* -------------------------------------------------
+   Props attendues :
+   - nutritionData : tableau d’objets (déjà formaté par le backend)
+   ------------------------------------------------- */
 const NutritionDashboard = ({ nutritionData }) => {
   // Si aucune donnée n’est fournie, on affiche un message simple.
   if (!nutritionData || nutritionData.length === 0) {
@@ -25,6 +47,15 @@ const NutritionDashboard = ({ nutritionData }) => {
       </p>
     );
   }
+
+  /* -------------------------------------------------
+     Convertir les dates de phase en timestamps (millis)
+     afin que Recharts les comprenne sur l’axe X.
+     ------------------------------------------------- */
+  const phaseLines = phases.map((p) => ({
+    ...p,
+    timestamp: new Date(p.date).getTime()
+  }));
 
   return (
     <div
@@ -51,6 +82,7 @@ const NutritionDashboard = ({ nutritionData }) => {
           margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          {/* ------------------- AXES ------------------- */}
           <XAxis
             dataKey="date"
             minTickGap={40}
@@ -64,6 +96,8 @@ const NutritionDashboard = ({ nutritionData }) => {
             style={{ fontSize: "12px" }}
           />
           <YAxis unit="ml" style={{ fontSize: "12px" }} />
+
+          {/* ------------------- TOOLTIP & LEGEND ------------------- */}
           <Tooltip
             labelFormatter={(label) =>
               new Date(label).toLocaleDateString("fr-FR", {
@@ -76,7 +110,31 @@ const NutritionDashboard = ({ nutritionData }) => {
           />
           <Legend />
 
-          {/* Allaitement – apparaît uniquement si la donnée existe */}
+          {/* ------------------- PHASES (ReferenceLines) ------------------- */}
+          {phaseLines.map((phase) => (
+            <ReferenceLine
+              key={phase.label}
+              x={phase.timestamp}
+              stroke="#8884d8"
+              strokeDasharray="4 4"
+              strokeWidth={1}
+            >
+              {/* Le label apparaît au-dessus de la ligne */}
+              <text
+                x={0}
+                dy={-4}
+                textAnchor="middle"
+                fill="#555"
+                fontSize="10"
+                fontFamily="sans-serif"
+              >
+                {phase.label}
+              </text>
+            </ReferenceLine>
+          ))}
+
+          {/* ------------------- AREAS (laits) ------------------- */}
+          {/* Allaitement (Sein) – apparaît uniquement si la donnée existe */}
           <Area
             type="monotone"
             dataKey="sein"
