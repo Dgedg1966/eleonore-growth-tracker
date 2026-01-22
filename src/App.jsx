@@ -28,7 +28,7 @@ import NutritionDashboard from "./NutritionDashboard";
    ----------------------------------------------------------------- */
 const computePercentile = (latest, tables, growthType) => {
   if (!latest) return 0;
-  const ref = tables[growthType][latest.month];
+  const ref = tables?.[growthType]?.[latest.month];
   if (!ref) return 0;
   const p50 = ref.p50;
   const p97 = ref.p97;
@@ -48,7 +48,7 @@ export default function App() {
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
   /* ---------- Growth tables (dynamic) ---------- */
-  const [tables, setTables] = useState(null); // null → not loaded yet
+  const [tables, setTables] = useState(null); // null = not loaded yet
   const [tablesLoading, setTablesLoading] = useState(true);
 
   /* ---------- Data from the Flask backend ---------- */
@@ -61,7 +61,7 @@ export default function App() {
   const [weeklyAverage, setWeeklyAverage] = useState(null);
 
   /* ---------- Global loading / error state ---------- */
-  const [loading, setLoading] = useState(true); // loading of backend data
+  const [dataLoading, setDataLoading] = useState(true); // loading of backend data
   const [errorMsg, setErrorMsg] = useState("");
 
   /* ---------- Backend URL ----------
@@ -140,7 +140,7 @@ export default function App() {
           "Impossible de récupérer les données depuis le serveur. Vérifiez que le backend est bien déployé."
         );
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
 
@@ -150,13 +150,12 @@ export default function App() {
   /* -----------------------------------------------------------------
      3️⃣ Prepare data for the growth chart (pick OMS or CDC)
      ----------------------------------------------------------------- */
-  // Wait until the tables are loaded; otherwise fallback to empty arrays
-  const selectedTables =
-    !tablesLoading && tables
-      ? chartStandard === "oms"
-        ? tables.omsTables
-        : tables.cdcTables
-      : []; // empty array while loading
+  // Wait until tables are loaded; otherwise fallback to empty arrays
+  const selectedTables = !tablesLoading && tables
+    ? chartStandard === "oms"
+      ? tables.omsTables
+      : tables.cdcTables
+    : []; // empty array while loading
 
   const combinedGrowth = (selectedTables || []).map((ref) => {
     const measure = myMeasures[growthType].find(
@@ -171,17 +170,13 @@ export default function App() {
   const latest =
     myMeasures[growthType][myMeasures[growthType].length - 1] ||
     { current: 0, month: 0 };
-  const percentile = computePercentile(
-    latest,
-    selectedTables || {}, // safe fallback
-    growthType
-  );
+  const percentile = computePercentile(latest, selectedTables, growthType);
 
   /* -----------------------------------------------------------------
-     4️⃣ Render (handle loading of both backend data AND tables)
+     4️⃣ Render (handle loading of BOTH tables AND backend data)
      ----------------------------------------------------------------- */
-  if (loading || tablesLoading) {
-    // Show a generic spinner while *anything* is still loading
+  if (dataLoading || tablesLoading) {
+    // Show a generic spinner while *any* loading is in progress
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         Chargement des données…
@@ -429,6 +424,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
