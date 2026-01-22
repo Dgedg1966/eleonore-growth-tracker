@@ -1,4 +1,42 @@
-/* App.css */
+/* src/app.css */
+
+/* -------------------------------------------------
+   Metric Card – reusable card style
+   ------------------------------------------------- */
 .metric-card {
   @apply bg-white text-white p-6 rounded-xl shadow-lg;
 }
+
+/* If you prefer a readable text color on the white background,
+   you can override the `text-white` with a darker shade: */
+.metric-card-light {
+  @apply bg-white text-gray-900 p-6 rounded-xl shadow-lg;
+}
+
+/* -------------------------------------------------
+   Additional small helpers (optional)
+   ------------------------------------------------- */
+
+/* Center content vertically & horizontally */
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+/* Small utility for consistent spacing between sections */
+.section-gap {
+  @apply my-8;
+}
+
+/* Simple button reset (useful if you create custom buttons) */
+.btn-reset {
+  @apply appearance-none border-none bg-transparent p-0 m-0;
+}
+
+/* -------------------------------------------------
+   Example usage in JSX (for reference)
+   -------------------------------------------------
+   <div className="metric-card">
+     <h3 className="text-xl font-bold">Title</h3>
+     <p className="mt-2">Some content…</p>
+   </div>
+   ------------------------------------------------- */
