@@ -1,7 +1,29 @@
+/* src/index.css */
+
+/* -------------------------------------------------
+   Tailwind base layers – must stay at the top
+   ------------------------------------------------- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* -------------------------------------------------
+   Custom utility classes
+   ------------------------------------------------- */
+
+/* A reusable “metric card” component.
+   • White background (so it stands out on the page background)
+   • Dark text for readability
+   • Consistent padding, rounded corners and a subtle shadow
+*/
 .metric-card {
-  @apply bg-white text-white p-6 rounded-xl shadow-lg;
+  @apply bg-white text-gray-900 p-6 rounded-xl shadow-lg;
 }
+
+/* If you ever need a variant with a colored background,
+   you can create additional helpers, e.g.:
+
+.metric-card-primary {
+  @apply bg-pink-600 text-white;
+}
+------------------------------------------------- */
