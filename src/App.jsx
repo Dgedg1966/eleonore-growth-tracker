@@ -47,19 +47,21 @@ export default function App() {
   const [growthType, setGrowthType] = useState("weight"); // weight | height | head
   const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
 
-  // Will receive { omsTables, cdcTables } from the dynamic import
-  const [tables, setTables] = useState({ omsTables: [], cdcTables: [] });
+  /* ---------- Growth tables (dynamic) ---------- */
+  const [tables, setTables] = useState(null); // null → not loaded yet
+  const [tablesLoading, setTablesLoading] = useState(true);
 
+  /* ---------- Data from the Flask backend ---------- */
   const [myMeasures, setMyMeasures] = useState({
     weight: [],
     height: [],
     head: [],
   });
-
   const [dailyNutrition, setDailyNutrition] = useState([]);
   const [weeklyAverage, setWeeklyAverage] = useState(null);
 
-  const [loading, setLoading] = useState(true);
+  /* ---------- Global loading / error state ---------- */
+  const [loading, setLoading] = useState(true); // loading of backend data
   const [errorMsg, setErrorMsg] = useState("");
 
   /* ---------- Backend URL ----------
@@ -76,12 +78,14 @@ export default function App() {
     const loadTables = async () => {
       try {
         const mod = await import("./growthData"); // contains omsTables & cdcTables
-        setTables(mod);
+        setTables(mod); // { omsTables, cdcTables }
       } catch (e) {
         console.error("Failed to load growth tables:", e);
         setErrorMsg(
           "Impossible de charger les courbes de croissance. Veuillez réessayer plus tard."
         );
+      } finally {
+        setTablesLoading(false);
       }
     };
     loadTables();
@@ -98,7 +102,7 @@ export default function App() {
         if (!growthResp.ok) throw new Error("Growth endpoint failed");
         const growthData = await growthResp.json();
 
-        // Re‑organise measures by type
+        // Re‑organise measures by type (weight / height / head)
         const measures = { weight: [], height: [], head: [] };
         growthData.forEach((row) => {
           const isoDate = new Date(row.date).toISOString().split("T")[0];
@@ -146,10 +150,14 @@ export default function App() {
   /* -----------------------------------------------------------------
      3️⃣ Prepare data for the growth chart (pick OMS or CDC)
      ----------------------------------------------------------------- */
+  // Wait until the tables are loaded; otherwise fallback to empty arrays
   const selectedTables =
-    chartStandard === "oms" ? tables.omsTables : tables.cdcTables;
+    !tablesLoading && tables
+      ? chartStandard === "oms"
+        ? tables.omsTables
+        : tables.cdcTables
+      : []; // empty array while loading
 
-  // Guard against the moment when the tables are still loading
   const combinedGrowth = (selectedTables || []).map((ref) => {
     const measure = myMeasures[growthType].find(
       (m) => m.month === ref.month
@@ -163,12 +171,17 @@ export default function App() {
   const latest =
     myMeasures[growthType][myMeasures[growthType].length - 1] ||
     { current: 0, month: 0 };
-  const percentile = computePercentile(latest, selectedTables || {}, growthType);
+  const percentile = computePercentile(
+    latest,
+    selectedTables || {}, // safe fallback
+    growthType
+  );
 
   /* -----------------------------------------------------------------
-     4️⃣ Render
+     4️⃣ Render (handle loading of both backend data AND tables)
      ----------------------------------------------------------------- */
-  if (loading) {
+  if (loading || tablesLoading) {
+    // Show a generic spinner while *anything* is still loading
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         Chargement des données…
@@ -416,6 +429,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
