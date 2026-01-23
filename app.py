@@ -102,14 +102,9 @@ def _parse_milk_sheet() -> Dict[str, Any]:
     """
     Retourne un dict contenant :
     {
-        "entries": [ ... toutes les prises (biberons + tétées) ... ],
+        "entries": [ … toutes les prises (biberons + tétées) … ],
         "weekly_average": 812.14   # valeur extraite de la ligne "Moyenne semaine"
     }
-    Le parsing suit exactement la logique décrite dans nos échanges :
-    * chaque paire de colonnes (B/D/F/...) = ml / heure ;
-    * le mot "Tétées" peut apparaître plusieurs fois, le volume total
-      des tétées se trouve dans la colonne ml du même jour ;
-    * le total quotidien (colonne "total") est utilisé comme contrôle de cohérence.
     """
     raw_df = pd.read_excel(
         EXCEL_PATH,
@@ -118,26 +113,56 @@ def _parse_milk_sheet() -> Dict[str, Any]:
         engine="openpyxl",
         dtype=str,
     )
-
+    
+    # DEBUG: Afficher ce que Pandas lit réellement
+    print(f"DEBUG [MILK]: Raw DataFrame shape: {raw_df.shape}", file=sys.stderr)
+    print(f"DEBUG [MILK]: First date row: {raw_df.iloc[0, 1:15]}", file=sys.stderr)
+    
     # -----------------------------------------------------------------
-    # 1️⃣  Dates (première ligne, colonnes paires B,D,F,...)
+    # 1️⃣  Dates (première ligne, colonnes paires B,D,F,…)
     # -----------------------------------------------------------------
-    date_cells = raw_df.iloc[0, 1::2]                     # B, D, F, ...
-    dates = pd.to_datetime(
-        date_cells.str.strip(","), format="%a %b %d %Y %H:%M:%S %Z%z"
-    )
-
+    date_cells = raw_df.iloc[0, 1::2]  # B, D, F, …
+    
+    # DEBUG: Afficher les dates brutes
+    print(f"DEBUG [MILK]: Date cells: {date_cells.tolist()}", file=sys.stderr)
+    
+    # Essayer plusieurs formats de parsing
+    dates = []
+    for cell in date_cells:
+        if pd.isna(cell) or str(cell).strip() == "":
+            dates.append(pd.NaT)
+            continue
+            
+        cell_str = str(cell).strip()
+        try:
+            # Essayer de parser avec différents formats
+            # Format 1: "2025-07-29 00:00:00" (format ISO)
+            parsed = pd.to_datetime(cell_str, errors='raise')
+            dates.append(parsed)
+            print(f"DEBUG [MILK]: Parsed '{cell_str}' as {parsed}", file=sys.stderr)
+        except Exception as e:
+            print(f"DEBUG [MILK]: Error parsing '{cell_str}': {e}", file=sys.stderr)
+            dates.append(pd.NaT)
+    
+    # Convertir en Series pour faciliter l'accès
+    dates = pd.Series(dates)
+    
+    # Continuer avec le reste de votre fonction...
     entries: List[Dict[str, Any]] = []
 
     # -----------------------------------------------------------------
-    # 2️⃣  Parcours des lignes de données (à partir de la 3ᵉ ligne du bloc)
+    # 2️⃣  Parcours des lignes de données
     # -----------------------------------------------------------------
-    for row_idx in range(2, raw_df.shape[0]):            # ligne 3 du tableau (index 2)
+    for row_idx in range(2, raw_df.shape[0]):  # ligne 3 du tableau (index 2)
         row = raw_df.iloc[row_idx]
+        
+        # DEBUG: Afficher la ligne actuelle
+        if row_idx < 10:  # Limiter le debug aux premières lignes
+            print(f"DEBUG [MILK]: Row {row_idx}: {row.tolist()}", file=sys.stderr)
 
-        for col_pair in range(1, raw_df.shape[1], 2):    # B/D/F/...
-            ml_val = row[col_pair]                      # colonne ml
-            hour_raw = row[col_pair + 1]                # colonne heure
+        for col_pair in range(1, raw_df.shape[1], 2):  # B/D/F/…
+            ml_val = row[col_pair]      # colonne ml
+            hour_raw = row[col_pair + 1]  # colonne heure
 
             # Ignorer les cellules complètement vides
             if pd.isna(ml_val) or str(ml_val).strip() == "":
@@ -145,6 +170,9 @@ def _parse_milk_sheet() -> Dict[str, Any]:
 
             # Date associée à cette paire de colonnes
             date_index = (col_pair - 1) // 2
+            if date_index >= len(dates) or pd.isna(dates.iloc[date_index]):
+                continue
+                
             cur_date = dates.iloc[date_index].date().isoformat()
 
             # ---------------------------------------------------------
@@ -156,9 +184,9 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                     {
                         "date": cur_date,
                         "type": "tétée",
-                        "source": "maternel",   # différencie biberon vs tétée
+                        "source": "maternel",  # différencie biberon vs tétée
                         "ml": float(ml_val),
-                        "hours": [],            # remplira le deuxième passage
+                        "hours": [],  # remplira le deuxième passage
                     }
                 )
                 continue
@@ -173,10 +201,10 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                     "type": "biberon",
                     "ml": float(ml_val),
                     "hour": hour_clean,
-                    # Le type de lait (Kendamil, Aptamil, ...) pourra être ajouté
-                    # via la légende couleur si vous le désirez.
                 }
             )
+
+    # ... reste de votre fonction (deuxième passage, validation, extraction moyenne) ...
 
     # -----------------------------------------------------------------
     # 3️⃣  Deuxième passage : récupération des créneaux de tétées
