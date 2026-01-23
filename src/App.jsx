@@ -69,7 +69,7 @@ export default function App() {
   ----------------------------------------------------------------- */
   const BACKEND_URL =
     process.env.REACT_APP_BACKEND_URL ||
-    "https://YOUR_BACKEND_URL_ON_RENDER.com";
+    "https://eleonore-backend.onrender.com";
 
   /* -----------------------------------------------------------------
      1️⃣ Load growth tables (dynamic import) – runs once at mount
@@ -424,6 +424,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
