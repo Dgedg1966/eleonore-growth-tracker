@@ -5,10 +5,6 @@ Flask backend that reads Éléonore.xlsx and exposes two JSON endpoints:
     /nutrition -> milk / feeding data (7-day blocks)
 
 Author : Lumo (Proton AI)
-# backend/app.py
-# -------------------------------------------------------------
-# Flask backend - lecture dynamique de Éléonore.xlsx (situé dans le même dossier)
-# -------------------------------------------------------------
 """
 import logging
 from pathlib import Path
@@ -25,8 +21,6 @@ CORS(app)   # Autorise les appels depuis le front-end React
 # -------------------------------------------------------------
 # CHEMIN VERS LE CLASSEUR (dans le même répertoire que ce fichier)
 # -------------------------------------------------------------
-# __file__ -> chemin complet de app.py
-# Path(__file__).parent -> dossier "backend"
 EXCEL_PATH = Path(__file__).parent / "Éléonore.xlsx"
 
 # Décalage de fuseau ajouté par Excel (GMT+0341 = +3 h 41 min)
@@ -55,7 +49,7 @@ def _clean_excel_hour(raw: Optional[str]) -> Optional[str]:
 
 
 # -------------------------------------------------------------
-# 1️⃣  Parsing de l'onglet "Poids et Taille"
+# Parsing de l'onglet "Poids et Taille"
 # -------------------------------------------------------------
 def _parse_growth_sheet() -> List[Dict[str, Any]]:
     """
@@ -96,7 +90,7 @@ def _parse_growth_sheet() -> List[Dict[str, Any]]:
 
 
 # -------------------------------------------------------------
-# 2️⃣  Parsing de l'onglet "Lait"
+# Parsing de l'onglet "Lait"
 # -------------------------------------------------------------
 def _parse_milk_sheet() -> Dict[str, Any]:
     """
@@ -119,9 +113,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
         dtype=str,
     )
 
-    # -----------------------------------------------------------------
-    # 1️⃣  Dates (première ligne, colonnes paires B,D,F,...)
-    # -----------------------------------------------------------------
+    # Dates (première ligne, colonnes paires B,D,F,...)
     date_cells = raw_df.iloc[0, 1::2]                     # B, D, F, ...
     dates = pd.to_datetime(
         date_cells.str.strip(","), format="%a %b %d %Y %H:%M:%S %Z%z"
@@ -129,9 +121,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
 
     entries: List[Dict[str, Any]] = []
 
-    # -----------------------------------------------------------------
-    # 2️⃣  Parcours des lignes de données (à partir de la 3ᵉ ligne du bloc)
-    # -----------------------------------------------------------------
+    # Parcours des lignes de données (à partir de la 3e ligne du bloc)
     for row_idx in range(2, raw_df.shape[0]):            # ligne 3 du tableau (index 2)
         row = raw_df.iloc[row_idx]
 
@@ -147,9 +137,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
             date_index = (col_pair - 1) // 2
             cur_date = dates.iloc[date_index].date().isoformat()
 
-            # ---------------------------------------------------------
             # Cas spécial : le mot "Tétées" apparaît dans la colonne heure
-            # ---------------------------------------------------------
             if isinstance(hour_raw, str) and hour_raw.lower().startswith("tétées"):
                 # Le volume total des tétées est déjà présent dans ml_val
                 entries.append(
@@ -163,9 +151,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                 )
                 continue
 
-            # ---------------------------------------------------------
             # Biberon classique
-            # ---------------------------------------------------------
             hour_clean = _clean_excel_hour(hour_raw)
             entries.append(
                 {
@@ -173,14 +159,10 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                     "type": "biberon",
                     "ml": float(ml_val),
                     "hour": hour_clean,
-                    # Le type de lait (Kendamil, Aptamil, ...) pourra être ajouté
-                    # via la légende couleur si vous le désirez.
                 }
             )
 
-    # -----------------------------------------------------------------
-    # 3️⃣  Deuxième passage : récupération des créneaux de tétées
-    # -----------------------------------------------------------------
+    # Deuxième passage : récupération des créneaux de tétées
     for row_idx in range(2, raw_df.shape[0]):
         row = raw_df.iloc[row_idx]
         for col_pair in range(1, raw_df.shape[1], 2):
@@ -195,9 +177,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                         ent.setdefault("hours", []).append(slot)
                         break
 
-    # -----------------------------------------------------------------
-    # 4️⃣  Validation des totaux quotidiens (colonne "total")
-    # -----------------------------------------------------------------
+    # Validation des totaux quotidiens (colonne "total")
     total_line = raw_df.iloc[-2]                     # ligne juste avant "Moyenne semaine"
     for col_pair in range(1, raw_df.shape[1], 2):
         total_val = total_line[col_pair]
@@ -211,9 +191,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                 f"Incohérence le {cur_date}: total={total_val}, somme={computed}"
             )
 
-    # -----------------------------------------------------------------
-    # 5️⃣  Extraction de la moyenne hebdomadaire (ligne "Moyenne semaine")
-    # -----------------------------------------------------------------
+    # Extraction de la moyenne hebdomadaire (ligne "Moyenne semaine")
     weekly_avg_line = raw_df.iloc[-1]                # dernière ligne du tableau
     weekly_average = None
     # La moyenne se trouve généralement dans la colonne P (index 15)
@@ -239,7 +217,7 @@ def growth_endpoint():
 
 @app.route("/nutrition", methods=["GET"])
 def nutrition_endpoint():
-    """Retourne les données de l'onglet "Lait"."""
+    """Retourne les données de l'onglet Lait."""
     data = _parse_milk_sheet()
     return jsonify(data)
 
