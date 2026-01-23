@@ -240,20 +240,17 @@ def home():
         }
     })
 
-"""
 @app.route("/growth", methods=["GET"])
 def growth_endpoint():
-    """Retourne les mesures de poids / taille / tête."""
+    """ Retourne les mesures de poids / taille / tête."""
     data = _parse_growth_sheet()
     return jsonify(data)
 
-
 @app.route("/nutrition", methods=["GET"])
 def nutrition_endpoint():
-    """Retourne les données de l'onglet "Lait"."""
+    """ Retourne les données de l'onglet "Lait"."""
     data = _parse_milk_sheet()
     return jsonify(data)
-"""
 
 # ------------------------------------------------------------
 #  LANCEMENT DU SERVEUR
