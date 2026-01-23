@@ -230,6 +230,16 @@ def _parse_milk_sheet() -> Dict[str, Any]:
 # ------------------------------------------------------------
 #  FLASK ROUTES
 # ------------------------------------------------------------
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "message": "API Éléonore Growth Tracker",
+        "endpoints": {
+            "growth": "/growth",
+            "nutrition": "/nutrition"
+        }
+    })
+
 @app.route("/growth", methods=["GET"])
 def growth_endpoint():
     """Retourne les mesures de poids / taille / tête."""
