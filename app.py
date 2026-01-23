@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Flask backend that reads Eléonore.xlsx and exposes two JSON endpoints:
-    /growth   → weight / height / head measurements
-    /nutrition → milk / feeding data (7‑day blocks)
+Flask backend that reads Éléonore.xlsx and exposes two JSON endpoints:
+    /growth   -> weight / height / head measurements
+    /nutrition -> milk / feeding data (7-day blocks)
 
 Author : Lumo (Proton AI)
 # backend/app.py
 # -------------------------------------------------------------
-# Flask backend – lecture dynamique de Eléonore.xlsx (situé dans le même dossier)
+# Flask backend - lecture dynamique de Éléonore.xlsx (situé dans le même dossier)
 # -------------------------------------------------------------
+"""
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -19,16 +20,16 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)   # Autorise les appels depuis le front‑end React
+CORS(app)   # Autorise les appels depuis le front-end React
 
 # -------------------------------------------------------------
 # CHEMIN VERS LE CLASSEUR (dans le même répertoire que ce fichier)
 # -------------------------------------------------------------
-# __file__ → chemin complet de app.py
-# Path(__file__).parent → dossier « backend »
-EXCEL_PATH = Path(__file__).parent / "Eléonore.xlsx"
+# __file__ -> chemin complet de app.py
+# Path(__file__).parent -> dossier "backend"
+EXCEL_PATH = Path(__file__).parent / "Éléonore.xlsx"
 
-# Décalage de fuseau ajouté par Excel (GMT+0341 = +3 h 41 min)
+# Décalage de fuseau ajouté par Excel (GMT+0341 = +3 h 41 min)
 OFFSET_MINUTES = 3 * 60 + 41   # 221 minutes
 
 
@@ -37,16 +38,16 @@ def _clean_excel_hour(raw: Optional[str]) -> Optional[str]:
     Convertit une chaîne Excel du type
         "Sat Dec 30 1899 06:41:12 GMT+0341 (heure du Golfe)"
     en une heure au format HH:MM exactement comme affichée dans la feuille.
-    - Si l’heure brute est >= 04:00, on garde telle quelle (Excel masque déjà le décalage).
+    - Si l'heure brute est >= 04:00, on garde telle quelle (Excel masque déjà le décalage).
     - Sinon, on soustrait le décalage +03:41.
     """
     if not isinstance(raw, str) or raw.strip() == "":
         return None
 
     # Parse la chaîne sans tenir compte du fuseau
-    dt = parser.parse(raw, ignoretz=True)   # ex. 1899‑12‑30 06:41:12
+    dt = parser.parse(raw, ignoretz=True)   # ex. 1899-12-30 06:41:12
     if dt.hour >= 4:
-        # L’heure affichée dans Excel est déjà correcte
+        # L'heure affichée dans Excel est déjà correcte
         return dt.strftime("%H:%M")
     # Sinon, on enlève le décalage +03:41
     corrected = dt - pd.Timedelta(minutes=OFFSET_MINUTES)
@@ -101,14 +102,14 @@ def _parse_milk_sheet() -> Dict[str, Any]:
     """
     Retourne un dict contenant :
     {
-        "entries": [ … toutes les prises (biberons + tétées) … ],
+        "entries": [ ... toutes les prises (biberons + tétées) ... ],
         "weekly_average": 812.14   # valeur extraite de la ligne "Moyenne semaine"
     }
-    Le parsing suit exactement la logique décrite dans nos échanges :
-    * chaque paire de colonnes (B/D/F/…) = ml / heure ;
-    * le mot « Tétées » peut apparaître plusieurs fois, le volume total
+    Le parsing suit exactement la logique décrite dans nos échanges :
+    * chaque paire de colonnes (B/D/F/...) = ml / heure ;
+    * le mot "Tétées" peut apparaître plusieurs fois, le volume total
       des tétées se trouve dans la colonne ml du même jour ;
-    * le total quotidien (colonne « total ») est utilisé comme contrôle de cohérence.
+    * le total quotidien (colonne "total") est utilisé comme contrôle de cohérence.
     """
     raw_df = pd.read_excel(
         EXCEL_PATH,
@@ -119,9 +120,9 @@ def _parse_milk_sheet() -> Dict[str, Any]:
     )
 
     # -----------------------------------------------------------------
-    # 1️⃣  Dates (première ligne, colonnes paires B,D,F,…)
+    # 1️⃣  Dates (première ligne, colonnes paires B,D,F,...)
     # -----------------------------------------------------------------
-    date_cells = raw_df.iloc[0, 1::2]                     # B, D, F, …
+    date_cells = raw_df.iloc[0, 1::2]                     # B, D, F, ...
     dates = pd.to_datetime(
         date_cells.str.strip(","), format="%a %b %d %Y %H:%M:%S %Z%z"
     )
@@ -134,7 +135,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
     for row_idx in range(2, raw_df.shape[0]):            # ligne 3 du tableau (index 2)
         row = raw_df.iloc[row_idx]
 
-        for col_pair in range(1, raw_df.shape[1], 2):    # B/D/F/…
+        for col_pair in range(1, raw_df.shape[1], 2):    # B/D/F/...
             ml_val = row[col_pair]                      # colonne ml
             hour_raw = row[col_pair + 1]                # colonne heure
 
@@ -172,7 +173,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                     "type": "biberon",
                     "ml": float(ml_val),
                     "hour": hour_clean,
-                    # Le type de lait (Kendamil, Aptamil, …) pourra être ajouté
+                    # Le type de lait (Kendamil, Aptamil, ...) pourra être ajouté
                     # via la légende couleur si vous le désirez.
                 }
             )
@@ -195,7 +196,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
                         break
 
     # -----------------------------------------------------------------
-    # 4️⃣  Validation des totaux quotidiens (colonne « total »)
+    # 4️⃣  Validation des totaux quotidiens (colonne "total")
     # -----------------------------------------------------------------
     total_line = raw_df.iloc[-2]                     # ligne juste avant "Moyenne semaine"
     for col_pair in range(1, raw_df.shape[1], 2):
@@ -211,7 +212,7 @@ def _parse_milk_sheet() -> Dict[str, Any]:
             )
 
     # -----------------------------------------------------------------
-    # 5️⃣  Extraction de la moyenne hebdomadaire (ligne « Moyenne semaine »)
+    # 5️⃣  Extraction de la moyenne hebdomadaire (ligne "Moyenne semaine")
     # -----------------------------------------------------------------
     weekly_avg_line = raw_df.iloc[-1]                # dernière ligne du tableau
     weekly_average = None
@@ -238,7 +239,7 @@ def growth_endpoint():
 
 @app.route("/nutrition", methods=["GET"])
 def nutrition_endpoint():
-    """Retourne les données de l'onglet « Lait »."""
+    """Retourne les données de l'onglet "Lait"."""
     data = _parse_milk_sheet()
     return jsonify(data)
 
