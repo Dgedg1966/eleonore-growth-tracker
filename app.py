@@ -69,7 +69,7 @@ def _parse_growth_sheet() -> List[Dict[str, Any]]:
     Les champs absents sont simplement omis.
     """
     df = pd.read_excel(
-        EXCEL_PATH, sheet_name="Poids et Taille", engine="openpyxl"
+        EXCEL_PATH, sheet_name="Poids et Taille", engine="openpyxl", header=1
     )
     # Nettoyage des noms de colonnes
     df.columns = [c.strip() for c in df.columns]
