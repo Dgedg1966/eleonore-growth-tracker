@@ -11,6 +11,7 @@ Author : Lumo (Proton AI)
 # -------------------------------------------------------------
 """
 import logging
+import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -100,19 +101,102 @@ def _parse_growth_sheet() -> List[Dict[str, Any]]:
 # -------------------------------------------------------------
 def _parse_milk_sheet() -> Dict[str, Any]:
     """
-    Retourne un dict contenant :
-    {
-        "entries": [ … toutes les prises (biberons + tétées) … ],
-        "weekly_average": 812.14   # valeur extraite de la ligne "Moyenne semaine"
-    }
+    Version simplifiée pour parser l'onglet "Lait"
     """
-    raw_df = pd.read_excel(
-        EXCEL_PATH,
-        sheet_name="Lait",
-        header=None,
-        engine="openpyxl",
-        dtype=str,
-    )
+    try:
+        raw_df = pd.read_excel(
+            EXCEL_PATH,
+            sheet_name="Lait",
+            header=None,
+            engine="openpyxl",
+            dtype=str,
+        )
+        
+        print(f"DEBUG: Raw milk sheet shape: {raw_df.shape}", file=sys.stderr)
+        
+        entries = []
+        
+        # 1. Extraire les dates (première ligne, colonnes B, D, F, ...)
+        dates = []
+        for col in range(1, raw_df.shape[1], 2):  # B=1, D=3, F=5, ...
+            date_val = raw_df.iloc[0, col]
+            if pd.isna(date_val):
+                dates.append(None)
+            else:
+                try:
+                    parsed = pd.to_datetime(str(date_val), errors='coerce')
+                    dates.append(parsed)
+                    print(f"DEBUG: Parsed date '{date_val}' -> {parsed}", file=sys.stderr)
+                except:
+                    dates.append(None)
+        
+        # 2. Parcourir les lignes de données (à partir de la ligne 3)
+        for row_idx in range(2, raw_df.shape[0]):
+            row = raw_df.iloc[row_idx]
+            
+            for date_idx, date_val in enumerate(dates):
+                if date_val is None:
+                    continue
+                    
+                col_ml = 1 + (date_idx * 2)      # colonne ml
+                col_hour = col_ml + 1            # colonne heure
+                
+                # Vérifier les bornes
+                if col_ml >= len(row) or col_hour >= len(row):
+                    continue
+                
+                ml_val = row[col_ml]
+                hour_val = row[col_hour]
+                
+                # Ignorer si vide
+                if pd.isna(ml_val) or str(ml_val).strip() == "":
+                    continue
+                
+                try:
+                    ml_float = float(str(ml_val).strip())
+                except ValueError:
+                    continue
+                
+                # Créer l'entrée
+                entry = {
+                    "date": date_val.date().isoformat(),
+                    "ml": ml_float,
+                }
+                
+                # Déterminer le type
+                if (hour_val and 
+                    isinstance(hour_val, str) and 
+                    "tétée" in hour_val.lower()):
+                    entry["type"] = "tétée"
+                    entry["source"] = "maternel"
+                    # Extraire les heures des tétées
+                    if "à" in hour_val:
+                        time_range = hour_val.split("à")[-1].strip()
+                        entry["time_range"] = time_range
+                else:
+                    entry["type"] = "biberon"
+                    if hour_val:
+                        entry["hour"] = _clean_excel_hour(hour_val)
+                
+                entries.append(entry)
+        
+        return {
+            "success": True,
+            "entries": entries,
+            "count": len(entries),
+            "weekly_average": None  # À implémenter plus tard
+        }
+        
+    except Exception as e:
+        print(f"ERROR in _parse_milk_sheet: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return {
+            "success": False,
+            "error": str(e),
+            "entries": [],
+            "count": 0
+        }
     
     # DEBUG: Afficher ce que Pandas lit réellement
     print(f"DEBUG [MILK]: Raw DataFrame shape: {raw_df.shape}", file=sys.stderr)
