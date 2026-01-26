@@ -1,38 +1,248 @@
-/* src/app.css */
+/* src/App.css */
 
-/* -------------------------------------------------
-   Metric Card – reusable card style
-   ------------------------------------------------- */
-.metric-card {
-  @apply bg-white text-white p-6 rounded-xl shadow-lg;
+/* =================================================== */
+/* 1. RESET & BASE STYLES */
+/* =================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* If you prefer a readable text color on the white background,
-   you can override the `text-white` with a darker shade: */
-.metric-card-light {
-  @apply bg-white text-gray-900 p-6 rounded-xl shadow-lg;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: #f8fafc;
+  color: #1f2937;
+  line-height: 1.5;
 }
 
-/* -------------------------------------------------
-   Additional small helpers (optional)
-   ------------------------------------------------- */
-
-/* Center content vertically & horizontally */
-.flex-center {
-  @apply flex items-center justify-center;
+/* =================================================== */
+/* 2. LAYOUT CONTAINERS */
+/* =================================================== */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Small utility for consistent spacing between sections */
-.section-gap {
-  @apply my-8;
+.dashboard {
+  flex: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  width: 100%;
 }
 
-/* Simple button reset (useful if you create custom buttons) */
-.btn-reset {
-  @apply appearance-none border-none bg-transparent p-0 m-0;
+/* =================================================== */
+/* 3. HEADER & NAVIGATION */
+/* =================================================== */
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Styles pour les badges de percentiles */
+.app-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 20px;
+}
+
+/* =================================================== */
+/* 4. STATS SUMMARY (grille de cartes) */
+/* =================================================== */
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+  margin-right: 16px;
+  color: #6b7280;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.stat-subvalue {
+  display: block;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* CORRECTION : Un seul style pour .stat-percentile */
+.stat-percentile {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  min-width: 40px;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* =================================================== */
+/* 5. DASHBOARD SECTIONS */
+/* =================================================== */
+.dashboard-section {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.dashboard-section h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #374151;
+  font-size: 22px;
+}
+
+/* =================================================== */
+/* 6. CHARTS & DATA VISUALIZATION */
+/* =================================================== */
+.chart-wrapper {
+  margin-top: 16px;
+}
+
+.chart-container {
+  height: 400px;
+  margin-bottom: 16px;
+}
+
+.chart-info {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #4b5563;
+  border-left: 4px solid #9f7aea;
+}
+
+.chart-info p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* =================================================== */
+/* 7. TABLES & DATA GRIDS */
+/* =================================================== */
+.table-section {
+  overflow: hidden;
+}
+
+.data-table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.data-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 800px;
+}
+
+.data-table-container th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.data-table-container td {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #374151;
+}
+
+.data-table-container tr:hover {
+  background: #f8fafc;
+}
+
+.data-table-container tr:last-child td {
+  border-bottom: none;
+}
+
+/* =================================================== */
+/* 8. PERCENTILE BADGES (supprimer le doublon) */
+/* =================================================== */
 .percentile-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -49,65 +259,6 @@
 .percentile-2 { background-color: #10b981; } /* 50-74% */
 .percentile-3 { background-color: #3b82f6; } /* 75-100% */
 
-/* Styles pour les statistiques */
-.stat-percentile {
-  font-size: 12px;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-left: 8px;
-}
-
-/* Amélioration des tableaux */
-.data-table-container {
-  overflow-x: auto;
-  margin-top: 20px;
-}
-
-.data-table-container table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table-container th {
-  background: #f8fafc;
-  padding: 12px;
-  text-align: left;
-  border-bottom: 2px solid #e2e8f0;
-  font-weight: 600;
-}
-
-.data-table-container td {
-  padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.data-table-container tr:hover {
-  background: #f8fafc;
-}
-
-/* Footer */
-.app-footer {
-  margin-top: 40px;
-  padding: 20px;
-  text-align: center;
-  background: #f8fafc;
-  border-radius: 10px;
-  font-size: 14px;
-  color: #64748b;
-}
-
-.debug-info {
-  font-size: 12px;
-  margin-top: 10px;
-}
-
-.debug-info a {
-  color: #3b82f6;
-  text-decoration: none;
-}
-/* Exemples pour la légende */
 .percentile-example {
   display: inline-block;
   width: 40px;
@@ -120,112 +271,321 @@
   margin-right: 8px;
 }
 
-/* Cartes de statistiques */
-.stat-card {
-  display: flex;
-  align-items: center;
+/* =================================================== */
+/* 9. INFO SECTIONS & CARDS */
+/* =================================================== */
+.info-section {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 32px;
+}
+
+.info-section h3 {
+  font-size: 18px;
+  color: #374151;
+  margin-bottom: 20px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.info-card {
   background: white;
   border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 20px;
   border: 1px solid #e5e7eb;
 }
 
-.stat-icon {
-  margin-right: 16px;
-  color: #6b7280;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-label {
-  display: block;
-  font-size: 12px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
+.info-card h4 {
+  font-size: 16px;
   color: #1f2937;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.stat-subvalue {
-  display: block;
+.info-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.info-card li {
+  margin-bottom: 8px;
   font-size: 14px;
+  color: #4b5563;
+}
+
+/* =================================================== */
+/* 10. LOADING & ERROR STATES */
+/* =================================================== */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  margin: 40px auto;
+  max-width: 600px;
+}
+
+.error-message h2 {
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.error-message p {
+  color: #7f1d1d;
+  margin-bottom: 20px;
+}
+
+.debug-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.debug-links a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+.debug-links a:hover {
+  background: #f1f5f9;
+}
+
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
   color: #6b7280;
+  font-size: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px dashed #d1d5db;
 }
 
-.stat-percentile {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-top: 4px;
+.error-text {
+  color: #dc2626;
+  margin-top: 12px;
+  font-size: 14px;
 }
 
-/* Tooltip personnalisé */
+.error-text a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+/* =================================================== */
+/* 11. TOOLTIPS */
+/* =================================================== */
 .custom-tooltip {
   background: white;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 .tooltip-label {
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   color: #1f2937;
   border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
+  font-size: 14px;
 }
 
 .tooltip-value {
-  margin: 4px 0;
+  margin: 6px 0;
   font-size: 14px;
 }
 
-/* En-têtes de section */
-.section-header {
+/* =================================================== */
+/* 12. FOOTER */
+/* =================================================== */
+.app-footer {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 32px;
+  margin-top: 60px;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.footer-content p {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.footer-links a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  color: #6b7280;
+}
+
+/* =================================================== */
+/* 13. RESPONSIVE DESIGN */
+/* =================================================== */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 16px;
+  }
+
+  .app-header {
+    padding: 20px;
+  }
+
+  .app-header h1 {
+    font-size: 24px;
+  }
+
+  .stats-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-section {
+    padding: 20px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  .chart-container {
+    height: 300px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table-container {
+    font-size: 12px;
+  }
+
+  .data-table-container th,
+  .data-table-container td {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header h1 {
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .separator {
+    display: none;
+  }
+}
+
+/* =================================================== */
+/* 14. UTILITY CLASSES (compatibilité avec votre code existant) */
+/* =================================================== */
+.metric-card {
+  background: white;
+  color: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.metric-card-light {
+  background: white;
+  color: #1f2937;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.flex-center {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  justify-content: center;
 }
 
-.section-header h2 {
-  margin: 0;
-  color: #374151;
+.section-gap {
+  margin: 32px 0;
 }
 
-/* Informations du graphique */
-.chart-info {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-top: 16px;
-  font-size: 14px;
-  color: #4b5563;
-  border-left: 4px solid #9f7aea;
-}
-
-.chart-info p {
+.btn-reset {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
   margin: 0;
 }
-/* -------------------------------------------------
-   Example usage in JSX (for reference)
-   -------------------------------------------------
-   <div className="metric-card">
-     <h3 className="text-xl font-bold">Title</h3>
-     <p className="mt-2">Some content…</p>
-   </div>
-   ------------------------------------------------- */
+
+.debug-info {
+  font-size: 12px;
+  margin-top: 10px;
+  color: #9ca3af;
+}
+
+.debug-info a {
+  color: #93c5fd;
+  text-decoration: none;
+}
