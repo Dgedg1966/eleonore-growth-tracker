@@ -1,6 +1,6 @@
 // Ce code contient les corrections pour Éléonore
 // src/App.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Area,
   Line,
@@ -20,410 +20,630 @@ import {
   Droplets,
   Plus,
 } from "lucide-react";
+import "./App.css";
 
-import NutritionDashboard from "./NutritionDashboard";
+// Importer les données de percentiles OMS/CDC depuis votre fichier
+// Note: Si le fichier est dans un autre dossier, ajustez le chemin
+import { weightData, heightData, headData } from "./growthData";
 
-/* -----------------------------------------------------------------
-   Helper – calculate the percentile (same logic you used before)
-   ----------------------------------------------------------------- */
-const computePercentile = (latest, tables, growthType) => {
-  if (!latest) return 0;
-  const ref = tables?.[growthType]?.[latest.month];
-  if (!ref) return 0;
-  const p50 = ref.p50;
-  const p97 = ref.p97;
-  const diff = p97 - p50 || 1; // avoid division by zero
-  const z = (latest.current - p50) / diff;
-  const perc = Math.round(50 + 50 * Math.tanh(z));
-  return Math.max(0, Math.min(100, perc));
+// Configuration du backend
+const BACKEND_URL = "https://eleonore-backend.onrender.com";
+
+// Hook personnalisé pour fetch les données
+const useApi = (url) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        setData(result);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err.message);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [url]);
+
+  return { data, loading, error };
 };
 
-/* -----------------------------------------------------------------
-   Main component
-   ----------------------------------------------------------------- */
-export default function App() {
-  /* ---------- UI state ---------- */
-  const [activeTab, setActiveTab] = useState("growth"); // "growth" | "nutrition"
-  const [growthType, setGrowthType] = useState("weight"); // weight | height | head
-  const [chartStandard, setChartStandard] = useState("oms"); // oms | cdc
+// Fonction pour calculer le percentile basé sur les données OMS/CDC
+const calculatePercentile = (value, ageInMonths, type) => {
+  if (!value || ageInMonths === null || ageInMonths === undefined) {
+    return null;
+  }
 
-  /* ---------- Growth tables (dynamic) ---------- */
-  const [tables, setTables] = useState(null); // null = not loaded yet
-  const [tablesLoading, setTablesLoading] = useState(true);
+  // Sélectionner les données appropriées selon le type
+  let referenceData;
+  switch (type) {
+    case "weight":
+      referenceData = weightData;
+      break;
+    case "height":
+      referenceData = heightData;
+      break;
+    case "head":
+      referenceData = headData;
+      break;
+    default:
+      return null;
+  }
 
-  /* ---------- Data from the Flask backend ---------- */
-  const [myMeasures, setMyMeasures] = useState({
-    weight: [],
-    height: [],
-    head: [],
-  });
-  const [dailyNutrition, setDailyNutrition] = useState([]);
-  const [weeklyAverage, setWeeklyAverage] = useState(null);
-
-  /* ---------- Global loading / error state ---------- */
-  const [dataLoading, setDataLoading] = useState(true); // loading of backend data
-  const [errorMsg, setErrorMsg] = useState("");
-
-  /* ---------- Backend URL ----------
-     Put your real backend URL here or define REACT_APP_BACKEND_URL
-  ----------------------------------------------------------------- */
-  const BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL ||
-    "https://eleonore-backend.onrender.com";
-
-  /* -----------------------------------------------------------------
-     1️⃣ Load growth tables (dynamic import) – runs once at mount
-     ----------------------------------------------------------------- */
-  useEffect(() => {
-    const loadTables = async () => {
-      try {
-        const mod = await import("./growthData"); // contains omsTables & cdcTables
-        setTables(mod); // { omsTables, cdcTables }
-      } catch (e) {
-        console.error("Failed to load growth tables:", e);
-        setErrorMsg(
-          "Impossible de charger les courbes de croissance. Veuillez réessayer plus tard."
-        );
-      } finally {
-        setTablesLoading(false);
+  // Trouver les données pour l'âge le plus proche
+  const ageRounded = Math.round(ageInMonths * 2) / 2; // Arrondir à 0.5 mois près
+  const ageKey = Math.max(0, Math.min(24, ageRounded)).toFixed(1);
+  
+  // Chercher les percentiles pour cet âge
+  const ageData = referenceData.find(d => d.age === parseFloat(ageKey));
+  
+  if (!ageData) {
+    // Si pas de données exactes, utiliser l'interpolation
+    const lowerAge = Math.floor(ageInMonths);
+    const upperAge = Math.ceil(ageInMonths);
+    const lowerData = referenceData.find(d => d.age === lowerAge);
+    const upperData = referenceData.find(d => d.age === upperAge);
+    
+    if (!lowerData || !upperData) {
+      return null;
+    }
+    
+    // Interpolation linéaire des percentiles
+    const fraction = ageInMonths - lowerAge;
+    
+    // Vérifier chaque percentile
+    const percentiles = [3, 15, 50, 85, 97];
+    let lowerPercentile = 50;
+    let upperPercentile = 50;
+    
+    for (let i = 0; i < percentiles.length; i++) {
+      const p = percentiles[i];
+      const lowerVal = lowerData[`p${p}`];
+      const upperVal = upperData[`p${p}`];
+      
+      if (value >= lowerVal && value <= upperVal) {
+        return p; // Le percentile exact
       }
-    };
-    loadTables();
-  }, []); // empty deps → run only once
-
-  /* -----------------------------------------------------------------
-     2️⃣ Fetch growth & nutrition data from the Flask backend
-     ----------------------------------------------------------------- */
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        /* --------- CROISSANCE --------- */
-        const growthResp = await fetch(`${BACKEND_URL}/growth`);
-        if (!growthResp.ok) throw new Error("Growth endpoint failed");
-        const growthData = await growthResp.json();
-
-        // Re‑organise measures by type (weight / height / head)
-        const measures = { weight: [], height: [], head: [] };
-        growthData.forEach((row) => {
-          const isoDate = new Date(row.date).toISOString().split("T")[0];
-          const month = Math.round(
-            (new Date(isoDate) - new Date("2025-05-14")) /
-              (1000 * 60 * 60 * 24 * 30.4)
-          );
-
-          if (row.weight !== undefined) {
-            measures.weight.push({ month, current: row.weight, date: isoDate });
-          }
-          if (row.height !== undefined) {
-            measures.height.push({ month, current: row.height, date: isoDate });
-          }
-          if (row.head !== undefined) {
-            measures.head.push({ month, current: row.head, date: isoDate });
-          }
-        });
-        setMyMeasures(measures);
-
-        /* --------- NUTRITION --------- */
-        const nutritionResp = await fetch(`${BACKEND_URL}/nutrition`);
-        if (!nutritionResp.ok) throw new Error("Nutrition endpoint failed");
-        const nutritionJson = await nutritionResp.json();
-
-        setDailyNutrition(nutritionJson.entries || []);
-        setWeeklyAverage(
-          nutritionJson.weekly_average !== undefined
-            ? nutritionJson.weekly_average
-            : null
-        );
-      } catch (e) {
-        console.error(e);
-        setErrorMsg(
-          "Impossible de récupérer les données depuis le serveur. Vérifiez que le backend est bien déployé."
-        );
-      } finally {
-        setDataLoading(false);
+      
+      if (value < lowerVal && i === 0) return 3; // En dessous du 3ème
+      if (value > upperVal && i === percentiles.length - 1) return 97; // Au-dessus du 97ème
+      
+      if (value >= lowerData[`p${p}`] && value <= lowerData[`p${percentiles[i+1]}`]) {
+        lowerPercentile = p;
       }
-    };
+      if (value >= upperData[`p${p}`] && value <= upperData[`p${percentiles[i+1]}`]) {
+        upperPercentile = p;
+      }
+    }
+    
+    // Interpolation du percentile
+    return Math.round(lowerPercentile + (upperPercentile - lowerPercentile) * fraction);
+  }
 
-    fetchAll();
-  }, [BACKEND_URL]);
+  // Si on a des données exactes pour cet âge
+  const percentiles = [3, 15, 50, 85, 97];
+  
+  // Vérifier les bornes
+  if (value < ageData.p3) return 3;
+  if (value > ageData.p97) return 97;
+  
+  // Trouver entre quels percentiles se situe la valeur
+  for (let i = 0; i < percentiles.length - 1; i++) {
+    const currentP = percentiles[i];
+    const nextP = percentiles[i + 1];
+    
+    if (value >= ageData[`p${currentP}`] && value <= ageData[`p${nextP}`]) {
+      // Interpolation entre les deux percentiles
+      const range = ageData[`p${nextP}`] - ageData[`p${currentP}`];
+      const position = (value - ageData[`p${currentP}`]) / range;
+      return Math.round(currentP + (nextP - currentP) * position);
+    }
+  }
+  
+  return 50; // Par défaut
+};
 
-  /* -----------------------------------------------------------------
-     3️⃣ Prepare data for the growth chart (pick OMS or CDC)
-     ----------------------------------------------------------------- */
-  // Wait until tables are loaded; otherwise fallback to empty arrays
-  const selectedTables = !tablesLoading && tables
-    ? chartStandard === "oms"
-      ? tables.omsTables
-      : tables.cdcTables
-    : []; // empty array while loading
+// Fonction pour obtenir l'âge en mois
+const getAgeInMonths = (birthDate, currentDate) => {
+  if (!birthDate || !currentDate) return 0;
+  
+  try {
+    const birth = new Date(birthDate);
+    const current = new Date(currentDate);
+    
+    if (isNaN(birth.getTime()) || isNaN(current.getTime())) {
+      return 0;
+    }
+    
+    const months = (current.getFullYear() - birth.getFullYear()) * 12 + 
+                   (current.getMonth() - birth.getMonth());
+    
+    // Ajouter la fraction du mois
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    const dayFraction = current.getDate() / daysInMonth;
+    
+    return Math.max(0, months + dayFraction);
+  } catch (error) {
+    console.error("Error calculating age:", error);
+    return 0;
+  }
+};
 
-  const combinedGrowth = (selectedTables || []).map((ref) => {
-    const measure = myMeasures[growthType].find(
-      (m) => m.month === ref.month
-    );
+// Composant principal
+function App() {
+  // Date de naissance d'Éléonore - À AJUSTER SELON VOTRE CAS
+  const birthDate = "2025-05-14";
+  
+  // Fetch des données du backend
+  const { 
+    data: growthData, 
+    loading: growthLoading, 
+    error: growthError 
+  } = useApi(`${BACKEND_URL}/growth`);
+
+  const { 
+    data: nutritionData, 
+    loading: nutritionLoading, 
+    error: nutritionError 
+  } = useApi(`${BACKEND_URL}/nutrition`);
+
+  // Vérifier que les données sont valides
+  const safeGrowthData = Array.isArray(growthData) ? growthData : [];
+  const safeNutritionData = nutritionData && nutritionData.entries && Array.isArray(nutritionData.entries) 
+    ? nutritionData.entries 
+    : [];
+
+  // Calculer les percentiles pour chaque mesure
+  const growthDataWithPercentiles = safeGrowthData.map(item => {
+    if (!item.date) return { ...item, ageMonths: 0 };
+    
+    const ageMonths = getAgeInMonths(birthDate, item.date);
+    
     return {
-      ...ref,
-      current: measure ? measure.current : null,
+      ...item,
+      ageMonths,
+      weightPercentile: item.weight ? calculatePercentile(item.weight, ageMonths, "weight") : null,
+      heightPercentile: item.height ? calculatePercentile(item.height, ageMonths, "height") : null,
+      headPercentile: item.head ? calculatePercentile(item.head, ageMonths, "head") : null
     };
   });
 
-  const latest =
-    myMeasures[growthType][myMeasures[growthType].length - 1] ||
-    { current: 0, month: 0 };
-  const percentile = computePercentile(latest, selectedTables, growthType);
+  // Dernière mesure
+  const lastMeasurement = growthDataWithPercentiles.length > 0 
+    ? growthDataWithPercentiles[growthDataWithPercentiles.length - 1] 
+    : null;
 
-  /* -----------------------------------------------------------------
-     4️⃣ Render (handle loading of BOTH tables AND backend data)
-     ----------------------------------------------------------------- */
-  if (dataLoading || tablesLoading) {
-    // Show a generic spinner while *any* loading is in progress
+  // Préparer les données pour les graphiques
+  const prepareChartData = (type) => {
+    return growthDataWithPercentiles
+      .filter(item => item[type] && item.date)
+      .map(item => {
+        // Format de date plus lisible
+        const date = new Date(item.date);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        
+        return {
+          date: `${day}/${month}`,
+          [type]: item[type],
+          percentile: item[`${type}Percentile`],
+          ageMonths: item.ageMonths?.toFixed(1)
+        };
+      });
+  };
+
+  const weightChartData = prepareChartData("weight");
+  const heightChartData = prepareChartData("height");
+  const headChartData = prepareChartData("head");
+
+  // Regrouper la nutrition par jour
+  const nutritionByDay = {};
+  safeNutritionData.forEach(entry => {
+    if (entry.date && entry.ml) {
+      const dateKey = entry.date.split("T")[0];
+      if (!nutritionByDay[dateKey]) {
+        nutritionByDay[dateKey] = 0;
+      }
+      nutritionByDay[dateKey] += entry.ml;
+    }
+  });
+
+  const nutritionChartData = Object.entries(nutritionByDay)
+    .map(([date, totalMl]) => {
+      const dateObj = new Date(date);
+      const month = dateObj.getMonth() + 1;
+      const day = dateObj.getDate();
+      
+      return {
+        date: `${day}/${month}`,
+        totalMl
+      };
+    })
+    .sort((a, b) => {
+      // Trier par date
+      const [dayA, monthA] = a.date.split("/").map(Number);
+      const [dayB, monthB] = b.date.split("/").map(Number);
+      return monthA === monthB ? dayA - dayB : monthA - monthB;
+    });
+
+  // Loading state
+  if (growthLoading || nutritionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        Chargement des données…
+      <div className="app-container">
+        <header className="app-header">
+          <h1><Baby size={32} /> Éléonore Growth Tracker</h1>
+        </header>
+        <div className="loading">
+          <div className="spinner"></div>
+          <p>Chargement des données...</p>
+        </div>
       </div>
     );
   }
 
-  if (errorMsg) {
+  // Error state
+  if (growthError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-100 text-red-800 p-4">
-        {errorMsg}
+      <div className="app-container">
+        <header className="app-header">
+          <h1><Baby size={32} /> Éléonore Growth Tracker</h1>
+        </header>
+        <div className="error-message">
+          <h2>Erreur de chargement</h2>
+          <p>{growthError}</p>
+          <p>Vérifiez que le backend est accessible :</p>
+          <a href={`${BACKEND_URL}/growth`} target="_blank" rel="noopener noreferrer">
+            {BACKEND_URL}/growth
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900">
-      {/* ------------------- NAVBAR ------------------- */}
-      <nav className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-5 shadow-xl">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Baby className="w-10 h-10" />
-            <h1 className="text-2xl font-bold">
-              Éléonore Growth Tracker
-            </h1>
-          </div>
-          <span className="text-sm opacity-90">Famille seulement</span>
-        </div>
-      </nav>
-
-      {/* ------------------- MAIN ------------------- */}
-      <main className="max-w-6xl mx-auto p-6">
-        {/* ------- Tab selector ------- */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-white rounded-full shadow-md p-1">
-            <button
-              onClick={() => setActiveTab("growth")}
-              className={`px-8 py-3 rounded-full font-semibold transition ${
-                activeTab === "growth"
-                  ? "bg-pink-600 text-white shadow"
-                  : "text-gray-600 hover:bg-pink-50"
-              }`}
-            >
-              Croissance
-            </button>
-            <button
-              onClick={() => setActiveTab("nutrition")}
-              className={`px-8 py-3 rounded-full font-semibold transition ${
-                activeTab === "nutrition"
-                  ? "bg-pink-600 text-white shadow"
-                  : "text-gray-600 hover:bg-pink-50"
-              }`}
-            >
-              Nutrition
-            </button>
-          </div>
-        </div>
-
-        {/* ==================== CROISSANCE ==================== */}
-        {activeTab === "growth" && (
-          <div className="space-y-8">
-            {/* ---- Standard selector (OMS / CDC) ---- */}
-            <select
-              value={chartStandard}
-              onChange={(e) => setChartStandard(e.target.value)}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white shadow-sm mx-auto block"
-            >
-              <option value="oms">OMS (recommandé 0‑2 ans)</option>
-              <option value="cdc">CDC</option>
-            </select>
-
-            {/* ---- Buttons for weight / height / head ---- */}
-            <div className="flex flex-wrap gap-4 justify-center">
-              <button
-                onClick={() => setGrowthType("weight")}
-                className={`p-6 rounded-xl shadow-lg ${
-                  growthType === "weight"
-                    ? "bg-pink-100 border-2 border-pink-500"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <Scale className="mx-auto mb-2 text-pink-600" size={32} />
-                <div className="font-bold text-xl">
-                  {latest.current} kg
-                </div>
-                <div className="text-sm text-gray-600">
-                  P {percentile}
-                </div>
-              </button>
-
-              <button
-                onClick={() => setGrowthType("height")}
-                className={`p-6 rounded-xl shadow-lg ${
-                  growthType === "height"
-                    ? "bg-green-100 border-2 border-green-500"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <Ruler className="mx-auto mb-2 text-green-600" size={32} />
-                <div className="font-bold text-xl">
-                  {latest.current} cm
-                </div>
-              </button>
-
-              <button
-                onClick={() => setGrowthType("head")}
-                className={`p-6 rounded-xl shadow-lg ${
-                  growthType === "head"
-                    ? "bg-purple-100 border-2 border-purple-500"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <Brain className="mx-auto mb-2 text-purple-600" size={32} />
-                <div className="font-bold text-xl">
-                  {latest.current} cm
-                </div>
-              </button>
+    <div className="app-container">
+      <header className="app-header">
+        <h1><Baby size={32} /> Éléonore Growth Tracker</h1>
+        <div className="stats-summary">
+          {lastMeasurement && lastMeasurement.weight && (
+            <div className="stat">
+              <Scale size={20} />
+              <span className="stat-label">Poids</span>
+              <span className="stat-value">{lastMeasurement.weight} kg</span>
+              {lastMeasurement.weightPercentile && (
+                <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.weightPercentile/25)}`}>
+                  {lastMeasurement.weightPercentile}ᵉ
+                </span>
+              )}
             </div>
+          )}
+          
+          {lastMeasurement && lastMeasurement.height && (
+            <div className="stat">
+              <Ruler size={20} />
+              <span className="stat-label">Taille</span>
+              <span className="stat-value">{lastMeasurement.height} cm</span>
+              {lastMeasurement.heightPercentile && (
+                <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.heightPercentile/25)}`}>
+                  {lastMeasurement.heightPercentile}ᵉ
+                </span>
+              )}
+            </div>
+          )}
+          
+          {lastMeasurement && lastMeasurement.head && (
+            <div className="stat">
+              <Brain size={20} />
+              <span className="stat-label">Périmètre crânien</span>
+              <span className="stat-value">{lastMeasurement.head} cm</span>
+              {lastMeasurement.headPercentile && (
+                <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.headPercentile/25)}`}>
+                  {lastMeasurement.headPercentile}ᵉ
+                </span>
+              )}
+            </div>
+          )}
+          
+          <div className="stat">
+            <Droplets size={20} />
+            <span className="stat-label">Prises</span>
+            <span className="stat-value">{safeNutritionData.length}</span>
+          </div>
+        </div>
+      </header>
 
-            {/* ---- Chart ---- */}
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h2 className="text-xl font-bold mb-4 text-center">
-                Courbe{" "}
-                {growthType === "weight"
-                  ? "Poids"
-                  : growthType === "height"
-                  ? "Taille"
-                  : "Périmètre crânien"}
-              </h2>
-              <div className="h-80">
-                <ResponsiveContainer>
-                  <ComposedChart data={combinedGrowth}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#e5e7eb"
-                    />
-                    <XAxis
-                      dataKey="month"
-                      label={{
-                        value: "Âge (mois)",
-                        position: "insideBottom",
-                        offset: -5,
-                      }}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend verticalAlign="top" />
-                    <Area
-                      dataKey="p97"
-                      fill="#fecaca"
-                      fillOpacity={0.3}
-                      stroke="none"
-                      name="P97"
-                    />
-                    <Area
-                      dataKey="p50"
-                      fill="#86efac"
-                      fillOpacity={0.4}
-                      stroke="none"
-                      name="Médiane"
-                    />
-                    <Area
-                      dataKey="p3"
-                      fill="#fecaca"
-                      fillOpacity={0.3}
-                      stroke="none"
-                      name="P3"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="current"
-                      stroke="#ec4899"
-                      strokeWidth={5}
-                      dot={{
-                        r: 6,
-                        stroke: "#fff",
-                        strokeWidth: 2,
-                      }}
-                      name="Éléonore"
-                      connectNulls
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+      <main className="dashboard">
+        {/* Section Poids avec percentiles */}
+        <section className="dashboard-section">
+          <h2><Scale size={24} /> Évolution du Poids (OMS/CDC)</h2>
+          {weightChartData.length > 0 ? (
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={400}>
+                <ComposedChart data={weightChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    label={{ 
+                      value: "Poids (kg)", 
+                      angle: -90, 
+                      position: "insideLeft",
+                      fill: '#6b7280'
+                    }}
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right"
+                    label={{ 
+                      value: "Percentile", 
+                      angle: 90, 
+                      position: "insideRight",
+                      fill: '#6b7280'
+                    }}
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value, name) => {
+                      if (name === "weight") return [`${value} kg`, "Poids"];
+                      if (name === "percentile") return [`${value}ᵉ percentile`, "Percentile"];
+                      return [value, name];
+                    }}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend />
+                  <Area 
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="percentile"
+                    fill="#8884d8"
+                    stroke="#8884d8"
+                    fillOpacity={0.3}
+                    name="Percentile OMS/CDC"
+                    strokeWidth={2}
+                  />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="weight"
+                    stroke="#f59e0b"
+                    name="Poids (kg)"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: "#f59e0b" }}
+                    activeDot={{ r: 8, fill: "#d97706" }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div className="chart-legend">
+                <p><strong>Sources:</strong> Courbes de croissance OMS (0-2 ans) et CDC (2+ ans)</p>
               </div>
             </div>
+          ) : (
+            <div className="no-data">
+              <p>Aucune donnée de poids disponible</p>
+            </div>
+          )}
+        </section>
 
-            {/* ---- Add measurement form (optional) ---- */}
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Plus className="w-5 h-5" /> Ajouter une mesure
-              </h3>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  // Vous pouvez garder cette logique si vous voulez
-                  // stocker les nouvelles mesures côté client.
-                }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-              >
-                <input
-                  type="date"
-                  name="date"
-                  required
-                  className="p-3 border rounded-lg"
-                />
-                <input
-                  type="number"
-                  name="value"
-                  step="0.1"
-                  placeholder="Valeur"
-                  required
-                  className="p-3 border rounded-lg"
-                />
-                <button
-                  type="submit"
-                  className="bg-pink-600 text-white font-semibold py-3 rounded-lg hover:bg-pink-700 transition"
-                >
-                  Enregistrer
-                </button>
-              </form>
+        {/* Section Taille */}
+        <section className="dashboard-section">
+          <h2><Ruler size={24} /> Évolution de la Taille</h2>
+          {heightChartData.length > 0 ? (
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={350}>
+                <ComposedChart data={heightChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    label={{ 
+                      value: "Taille (cm)", 
+                      angle: -90, 
+                      position: "insideLeft",
+                      fill: '#6b7280'
+                    }}
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Legend />
+                  <Area 
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="percentile"
+                    fill="#10b981"
+                    stroke="#10b981"
+                    fillOpacity={0.2}
+                    name="Percentile"
+                  />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="height"
+                    stroke="#3b82f6"
+                    name="Taille (cm)"
+                    strokeWidth={3}
+                    dot={{ r: 5 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="no-data">Aucune donnée de taille disponible</p>
+          )}
+        </section>
+
+        {/* Section Nutrition */}
+        <section className="dashboard-section">
+          <h2><Droplets size={24} /> Consommation Journalière de Lait</h2>
+          {nutritionChartData.length > 0 ? (
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={nutritionChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <YAxis 
+                    label={{ 
+                      value: "Volume total (ml)", 
+                      angle: -90, 
+                      position: "insideLeft",
+                      fill: '#6b7280'
+                    }}
+                    tick={{ fill: '#6b7280' }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value} ml`, "Volume total"]}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="totalMl" 
+                    fill="#8b5cf6" 
+                    name="Lait total (ml)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="no-data">
+              <p>Aucune donnée nutritionnelle disponible</p>
+              {nutritionError && <p className="error-text">Erreur: {nutritionError}</p>}
+            </div>
+          )}
+        </section>
+
+        {/* Tableau des données */}
+        <section className="dashboard-section">
+          <h2>📊 Tableau des Mesures Détaillées</h2>
+          <div className="data-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Âge</th>
+                  <th>Poids</th>
+                  <th>%tile</th>
+                  <th>Taille</th>
+                  <th>%tile</th>
+                  <th>PC</th>
+                  <th>%tile</th>
+                </tr>
+              </thead>
+              <tbody>
+                {growthDataWithPercentiles.slice(-10).reverse().map((item, index) => (
+                  <tr key={index}>
+                    <td>{item.date}</td>
+                    <td>{item.ageMonths?.toFixed(1)} mois</td>
+                    <td>{item.weight ? `${item.weight} kg` : "-"}</td>
+                    <td>
+                      {item.weightPercentile ? (
+                        <span className={`percentile-badge percentile-${Math.floor(item.weightPercentile/25)}`}>
+                          {item.weightPercentile}ᵉ
+                        </span>
+                      ) : "-"}
+                    </td>
+                    <td>{item.height ? `${item.height} cm` : "-"}</td>
+                    <td>
+                      {item.heightPercentile ? (
+                        <span className={`percentile-badge percentile-${Math.floor(item.heightPercentile/25)}`}>
+                          {item.heightPercentile}ᵉ
+                        </span>
+                      ) : "-"}
+                    </td>
+                    <td>{item.head ? `${item.head} cm` : "-"}</td>
+                    <td>
+                      {item.headPercentile ? (
+                        <span className={`percentile-badge percentile-${Math.floor(item.headPercentile/25)}`}>
+                          {item.headPercentile}ᵉ
+                        </span>
+                      ) : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section informations */}
+        <section className="info-section">
+          <h3>ℹ️ Informations</h3>
+          <div className="info-grid">
+            <div className="info-card">
+              <h4>Sources des Percentiles</h4>
+              <ul>
+                <li><strong>OMS:</strong> Standards de croissance 0-2 ans</li>
+                <li><strong>CDC:</strong> Courbes de croissance 2+ ans</li>
+                <li>Méthode LMS pour le calcul des percentiles</li>
+              </ul>
+            </div>
+            <div className="info-card">
+              <h4>Définition des Percentiles</h4>
+              <ul>
+                <li><span className="percentile-example percentile-0">3ᵉ</span>: Au-dessus de 3% des enfants</li>
+                <li><span className="percentile-example percentile-1">25ᵉ</span>: Au-dessus de 25% des enfants</li>
+                <li><span className="percentile-example percentile-2">50ᵉ</span>: Moyenne</li>
+                <li><span className="percentile-example percentile-3">75ᵉ</span>: Au-dessus de 75% des enfants</li>
+              </ul>
             </div>
           </div>
-        )}
-
-        {/* ==================== NUTRITION ==================== */}
-        {activeTab === "nutrition" && (
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
-              <Droplets className="text-blue-500" /> Nutrition quotidienne
-            </h2>
-
-            {/* Pass the fetched data to the dashboard */}
-            <NutritionDashboard nutritionData={dailyNutrition} />
-
-            {/* Optional weekly average display */}
-            {weeklyAverage !== null && (
-              <p className="mt-4 text-center text-gray-700">
-                Moyenne quotidienne de la semaine :{" "}
-                <strong>{weeklyAverage.toFixed(2)} ml</strong>
-              </p>
-            )}
-          </div>
-        )}
+        </section>
       </main>
+
+      <footer className="app-footer">
+        <p>Éléonore Growth Tracker - Données OMS/CDC - {new Date().getFullYear()}</p>
+        <p className="debug-info">
+          Backend: <a href={BACKEND_URL} target="_blank" rel="noopener noreferrer">{BACKEND_URL}</a> | 
+          {safeGrowthData.length} mesures | {safeNutritionData.length} prises
+        </p>
+      </footer>
     </div>
   );
 }
+
+export default App;
 
 
 
