@@ -680,3 +680,110 @@ body {
   color: #718096;
   font-style: italic;
 }
+/* Navigation entre pages */
+.navigation-section {
+  margin: 2rem 0;
+}
+
+.nav-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.nav-card {
+  display: block;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.nav-card:hover {
+  border-color: #4299e1;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(66, 153, 225, 0.15);
+}
+
+.nav-card-content {
+  text-align: center;
+}
+
+.nav-card h3 {
+  margin: 1rem 0 0.5rem;
+  color: #2d3748;
+}
+
+.nav-card p {
+  color: #718096;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.nav-button {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.nav-button:hover {
+  background: #3182ce;
+}
+
+/* Page header avec lien retour */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a5568;
+  text-decoration: none;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.back-link:hover {
+  color: #2d3748;
+}
+
+/* Cartes de statistiques */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.stat-card .value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin: 0.5rem 0;
+}
+
+.stat-card .label {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+
