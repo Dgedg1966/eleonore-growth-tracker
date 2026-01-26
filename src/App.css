@@ -32,6 +32,79 @@
   @apply appearance-none border-none bg-transparent p-0 m-0;
 }
 
+/* Styles pour les badges de percentiles */
+.percentile-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.percentile-0 { background-color: #ef4444; } /* 0-24% */
+.percentile-1 { background-color: #f59e0b; } /* 25-49% */
+.percentile-2 { background-color: #10b981; } /* 50-74% */
+.percentile-3 { background-color: #3b82f6; } /* 75-100% */
+
+/* Styles pour les statistiques */
+.stat-percentile {
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+/* Amélioration des tableaux */
+.data-table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.data-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table-container th {
+  background: #f8fafc;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.data-table-container td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table-container tr:hover {
+  background: #f8fafc;
+}
+
+/* Footer */
+.app-footer {
+  margin-top: 40px;
+  padding: 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.debug-info {
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.debug-info a {
+  color: #3b82f6;
+  text-decoration: none;
+}
 /* -------------------------------------------------
    Example usage in JSX (for reference)
    -------------------------------------------------
