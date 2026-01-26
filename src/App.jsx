@@ -1,5 +1,5 @@
 // Ce code contient les corrections pour Éléonore
-// src/App.jsx
+// src/App.jsx - VERSION CORRIGÉE
 import React, { useState, useEffect } from "react";
 import {
   Area,
@@ -63,42 +63,14 @@ const useApi = (url) => {
   return { data, loading, error };
 };
 
-// Ajoutez ceci dans votre fichier App.jsx actuel, dans la partie Growth
-const [selectedStandard, setSelectedStandard] = useState('oms'); // 'oms' ou 'cdc'
-
-// Dans le JSX, ajoutez ce sélecteur :
-<div className="standard-selector">
-  <h3>Choisir la référence :</h3>
-  <div className="standard-buttons">
-    <button 
-      className={`standard-btn ${selectedStandard === 'oms' ? 'active' : ''}`}
-      onClick={() => setSelectedStandard('oms')}
-    >
-      OMS (Organisation Mondiale de la Santé)
-    </button>
-    <button 
-      className={`standard-btn ${selectedStandard === 'cdc' ? 'active' : ''}`}
-      onClick={() => setSelectedStandard('cdc')}
-    >
-      CDC (Centers for Disease Control)
-    </button>
-  </div>
-  <p className="standard-info">
-    {selectedStandard === 'oms' 
-      ? "Référence internationale pour les enfants de 0 à 24 mois" 
-      : "Référence américaine utilisée au-delà de 24 mois"}
-  </p>
-</div>
-
 // Fonction pour calculer le percentile basé sur vos données OMS/CDC
-const calculatePercentile = (value, ageInMonths, type) => {
+const calculatePercentile = (value, ageInMonths, type, selectedStandard) => { // AJOUT: selectedStandard param
   if (!value || ageInMonths === null || ageInMonths === undefined) {
     return null;
   }
 
-  // Choisir la table appropriée (OMS pour 0-24 mois, CDC pour plus précis ou >24 mois)
-  const useOMS = ageInMonths <= 24;
-  const tables = useOMS ? omsTables : cdcTables;
+  // Choisir la table appropriée selon le standard sélectionné
+  const tables = selectedStandard === 'oms' ? omsTables : cdcTables;
   const tableData = tables[type];
   
   if (!tableData || tableData.length === 0) {
@@ -255,7 +227,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // Composant principal
 function App() {
-  // Date de naissance d'Éléonore - À AJUSTER SELON VOTRE CAS
+  // ÉTAT POUR LE STANDARD SÉLECTIONNÉ - DANS LE COMPOSANT
+  const [selectedStandard, setSelectedStandard] = useState('oms'); // 'oms' ou 'cdc'
+  
+  // Date de naissance d'Éléonore
   const birthDate = "2025-05-14";
   
   // Fetch des données du backend
@@ -277,7 +252,7 @@ function App() {
     ? nutritionData.entries 
     : [];
 
-  // Calculer les percentiles pour chaque mesure
+  // Calculer les percentiles pour chaque mesure avec le standard sélectionné
   const growthDataWithPercentiles = safeGrowthData.map(item => {
     if (!item.date) return { ...item, ageMonths: 0 };
     
@@ -286,9 +261,9 @@ function App() {
     return {
       ...item,
       ageMonths: parseFloat(ageMonths.toFixed(2)),
-      weightPercentile: item.weight ? calculatePercentile(item.weight, ageMonths, "weight") : null,
-      heightPercentile: item.height ? calculatePercentile(item.height, ageMonths, "height") : null,
-      headPercentile: item.head ? calculatePercentile(item.head, ageMonths, "head") : null
+      weightPercentile: item.weight ? calculatePercentile(item.weight, ageMonths, "weight", selectedStandard) : null,
+      heightPercentile: item.height ? calculatePercentile(item.height, ageMonths, "height", selectedStandard) : null,
+      headPercentile: item.head ? calculatePercentile(item.head, ageMonths, "head", selectedStandard) : null
     };
   });
 
@@ -324,7 +299,7 @@ function App() {
   const heightChartData = prepareChartData("height", "Taille (cm)");
   const headChartData = prepareChartData("head", "Périmètre crânien (cm)");
 
-  // Regrouper la nutrition par jour
+  // Regrouper la nutrition par jour (À SUPPRIMER PLUS TARD)
   const nutritionByDay = {};
   safeNutritionData.forEach(entry => {
     if (entry.date && entry.ml) {
@@ -399,6 +374,31 @@ function App() {
         <div className="header-subtitle">
           <p>Suivi de croissance avec percentiles OMS/CDC</p>
         </div>
+        
+        {/* SÉLECTEUR OMS/CDC - AJOUTÉ ICI */}
+        <div className="standard-selector">
+          <h3>Choisir la référence :</h3>
+          <div className="standard-buttons">
+            <button 
+              className={`standard-btn ${selectedStandard === 'oms' ? 'active' : ''}`}
+              onClick={() => setSelectedStandard('oms')}
+            >
+              OMS (Organisation Mondiale de la Santé)
+            </button>
+            <button 
+              className={`standard-btn ${selectedStandard === 'cdc' ? 'active' : ''}`}
+              onClick={() => setSelectedStandard('cdc')}
+            >
+              CDC (Centers for Disease Control)
+            </button>
+          </div>
+          <p className="standard-info">
+            {selectedStandard === 'oms' 
+              ? "Référence internationale pour les enfants de 0 à 24 mois" 
+              : "Référence américaine utilisée au-delà de 24 mois"}
+          </p>
+        </div>
+        
         <div className="stats-summary">
           {lastMeasurement && (
             <>
@@ -412,7 +412,7 @@ function App() {
                     <span className="stat-value">{lastMeasurement.weight} kg</span>
                     {lastMeasurement.weightPercentile && (
                       <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.weightPercentile/25)}`}>
-                        {lastMeasurement.weightPercentile}ᵉ percentile
+                        {lastMeasurement.weightPercentile}ᵉ percentile ({selectedStandard.toUpperCase()})
                       </span>
                     )}
                   </div>
@@ -429,7 +429,7 @@ function App() {
                     <span className="stat-value">{lastMeasurement.height} cm</span>
                     {lastMeasurement.heightPercentile && (
                       <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.heightPercentile/25)}`}>
-                        {lastMeasurement.heightPercentile}ᵉ percentile
+                        {lastMeasurement.heightPercentile}ᵉ percentile ({selectedStandard.toUpperCase()})
                       </span>
                     )}
                   </div>
@@ -442,11 +442,11 @@ function App() {
                     <Brain size={24} />
                   </div>
                   <div className="stat-content">
-                    <span className="stat-label">PC actuel</span>
+                    <span className="stat-label">Tour de tête actuel</span>
                     <span className="stat-value">{lastMeasurement.head} cm</span>
                     {lastMeasurement.headPercentile && (
                       <span className={`stat-percentile percentile-${Math.floor(lastMeasurement.headPercentile/25)}`}>
-                        {lastMeasurement.headPercentile}ᵉ percentile
+                        {lastMeasurement.headPercentile}ᵉ percentile ({selectedStandard.toUpperCase()})
                       </span>
                     )}
                   </div>
@@ -473,7 +473,7 @@ function App() {
         <section className="dashboard-section">
           <div className="section-header">
             <Scale size={28} />
-            <h2>Évolution du Poids avec Percentiles OMS/CDC</h2>
+            <h2>Évolution du Poids - Référence {selectedStandard.toUpperCase()}</h2>
           </div>
           {weightChartData.length > 0 ? (
             <div className="chart-wrapper">
@@ -520,7 +520,7 @@ function App() {
                       fill="#9f7aea"
                       stroke="#9f7aea"
                       fillOpacity={0.3}
-                      name="Percentile OMS/CDC"
+                      name={`Percentile ${selectedStandard.toUpperCase()}`}
                       strokeWidth={1}
                     />
                     <Line 
@@ -538,8 +538,8 @@ function App() {
               </div>
               <div className="chart-info">
                 <p>
-                  <strong>Source des percentiles:</strong> OMS (0-24 mois) et CDC standards. 
-                  Les courbes montrent la position relative par rapport aux références internationales.
+                  <strong>Source des percentiles:</strong> {selectedStandard === 'oms' ? 'OMS (0-24 mois)' : 'CDC'} standards. 
+                  Les courbes montrent la position relative par rapport aux références {selectedStandard === 'oms' ? 'internationales' : 'américaines'}.
                 </p>
               </div>
             </div>
@@ -554,7 +554,7 @@ function App() {
         <section className="dashboard-section">
           <div className="section-header">
             <Ruler size={28} />
-            <h2>Évolution de la Taille</h2>
+            <h2>Évolution de la Taille - Référence {selectedStandard.toUpperCase()}</h2>
           </div>
           {heightChartData.length > 0 ? (
             <div className="chart-wrapper">
@@ -583,7 +583,7 @@ function App() {
                       fill="#48bb78"
                       stroke="#48bb78"
                       fillOpacity={0.2}
-                      name="Percentile"
+                      name={`Percentile ${selectedStandard.toUpperCase()}`}
                     />
                     <Line 
                       type="monotone"
@@ -602,79 +602,24 @@ function App() {
           )}
         </section>
 
-        {/* Section Nutrition */}
-        <section className="dashboard-section">
-          <div className="section-header">
-            <Droplets size={28} />
-            <h2>Consommation Journalière de Lait</h2>
-          </div>
-          {nutritionChartData.length > 0 ? (
-            <div className="chart-wrapper">
-              <div className="chart-container">
-                <ResponsiveContainer width="100%" height={300}>
-                  <ComposedChart data={nutritionChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: '#4a5568', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      label={{ 
-                        value: "Volume total (ml)", 
-                        angle: -90, 
-                        position: "insideLeft",
-                        fill: '#4a5568'
-                      }}
-                      tick={{ fill: '#4a5568' }}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`${value} ml`, "Volume"]}
-                      labelFormatter={(label) => `Date: ${label}`}
-                    />
-                    <Legend />
-                    <Bar 
-                      dataKey="totalMl" 
-                      fill="#d53f8c" 
-                      name="Lait total (ml)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="no-data">
-              <p>Aucune donnée nutritionnelle disponible</p>
-              {nutritionError && (
-                <div className="error-text">
-                  <p>Erreur nutrition: {nutritionError}</p>
-                  <a href={`${BACKEND_URL}/nutrition`} target="_blank" rel="noopener noreferrer">
-                    Vérifier l'endpoint /nutrition
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* Tableau des données détaillées */}
+        {/* Tableau des données détaillées - TITRES CORRIGÉS */}
         <section className="dashboard-section table-section">
           <div className="section-header">
             <Plus size={28} />
-            <h2>Détail des Mesures avec Percentiles</h2>
+            <h2>Détail des Mesures avec Percentiles ({selectedStandard.toUpperCase()})</h2>
           </div>
           <div className="data-table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>Date de mesure</th>
                   <th>Âge (mois)</th>
                   <th>Poids (kg)</th>
-                  <th>%tile</th>
+                  <th>Percentile poids</th>
                   <th>Taille (cm)</th>
-                  <th>%tile</th>
-                  <th>PC (cm)</th>
-                  <th>%tile</th>
+                  <th>Percentile taille</th>
+                  <th>Tour de tête (cm)</th>
+                  <th>Percentile tour de tête</th>
                 </tr>
               </thead>
               <tbody>
@@ -715,7 +660,7 @@ function App() {
 
         {/* Section d'information */}
         <section className="info-section">
-          <h3>À propos des Percentiles OMS/CDC</h3>
+          <h3>À propos des Percentiles {selectedStandard.toUpperCase()}</h3>
           <div className="info-grid">
             <div className="info-card">
               <h4><Scale size={20} /> Interprétation des Percentiles</h4>
@@ -727,7 +672,7 @@ function App() {
               </ul>
             </div>
             <div className="info-card">
-              <h4><Ruler size={20} /> Sources des Données</h4>
+              <h4><Ruler size={20} /> Source {selectedStandard.toUpperCase()}</h4>
               <ul>
                 <li><strong>OMS:</strong> Standards internationaux 0-24 mois</li>
                 <li><strong>CDC:</strong> Courbes américaines de référence</li>
@@ -749,12 +694,10 @@ function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <p>
-            <strong>Éléonore Growth Tracker</strong> - Système de suivi de croissance avec références OMS/CDC
+            <strong>Éléonore Growth Tracker</strong> - Système de suivi de croissance
           </p>
           <div className="footer-links">
-            <a href={`${BACKEND_URL}/health`} target="_blank" rel="noopener noreferrer">
-              Vérifier l'état du backend
-            </a>
+            <span>Référence active: {selectedStandard.toUpperCase()}</span>
             <span className="separator">•</span>
             <span>{safeGrowthData.length} mesures de croissance</span>
             <span className="separator">•</span>
