@@ -63,6 +63,33 @@ const useApi = (url) => {
   return { data, loading, error };
 };
 
+// Ajoutez ceci dans votre fichier App.jsx actuel, dans la partie Growth
+const [selectedStandard, setSelectedStandard] = useState('oms'); // 'oms' ou 'cdc'
+
+// Dans le JSX, ajoutez ce sélecteur :
+<div className="standard-selector">
+  <h3>Choisir la référence :</h3>
+  <div className="standard-buttons">
+    <button 
+      className={`standard-btn ${selectedStandard === 'oms' ? 'active' : ''}`}
+      onClick={() => setSelectedStandard('oms')}
+    >
+      OMS (Organisation Mondiale de la Santé)
+    </button>
+    <button 
+      className={`standard-btn ${selectedStandard === 'cdc' ? 'active' : ''}`}
+      onClick={() => setSelectedStandard('cdc')}
+    >
+      CDC (Centers for Disease Control)
+    </button>
+  </div>
+  <p className="standard-info">
+    {selectedStandard === 'oms' 
+      ? "Référence internationale pour les enfants de 0 à 24 mois" 
+      : "Référence américaine utilisée au-delà de 24 mois"}
+  </p>
+</div>
+
 // Fonction pour calculer le percentile basé sur vos données OMS/CDC
 const calculatePercentile = (value, ageInMonths, type) => {
   if (!value || ageInMonths === null || ageInMonths === undefined) {
@@ -740,6 +767,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
