@@ -9,35 +9,50 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-  ReferenceLine,          // <-- ajouté
+  ReferenceLine,
 } from "recharts";
 
-/* -------------------------------------------------
-   Phases d’alimentation d’Éléonore (dates au format ISO)
-   ------------------------------------------------- */
-const phases = [
-  { label: "Intro Kabrita (Chèvre)",      date: "2025-07-29" },
-  { label: "Fin Kabrita (Chèvre)",        date: "2025-08-09" },
-  { label: "Transition Kendamil (Chèvre)",date: "2025-08-13" },
+/* ---------------------------------------------------------------
+   Phases d’alimentation d’Éléonore
+   - Les dates sont au format ISO (YYYY‑MM‑DD) pour matcher le
+     format de `nutritionData` (ex. "2025-07-29").
+   - Vous pouvez ajouter / retirer des phases ici sans toucher le
+     reste du composant.
+   --------------------------------------------------------------- */
+const PHASES = [
+  { label: "Intro Kabrita (Chèvre)", date: "2025-07-29" },
+  { label: "Fin Kabrita (Chèvre)",   date: "2025-08-09" },
+  { label: "Transition Kendamil (Chèvre)", date: "2025-08-13" },
 
-  { label: "Intro Aptamil (Vache)",       date: "2025-07-29" },
-  { label: "Fin Aptamil (Vache)",         date: "2025-11-14" },
+  { label: "Intro Aptamil (Vache)", date: "2025-07-29" },
+  { label: "Fin Aptamil (Vache)",   date: "2025-11-14" },
 
-  { label: "Intro Kendamil (Chèvre)",     date: "2025-11-11" },
-  { label: "Fin Kendamil (Chèvre)",       date: "2026-01-19" },
+  { label: "Intro Kendamil (Chèvre)", date: "2025-11-11" },
+  { label: "Fin Kendamil (Chèvre)",   date: "2026-01-19" },
 
-  { label: "Intro France Lait",           date: "2025-12-16" },
+  { label: "Intro France Lait", date: "2025-12-16" },
 
-  { label: "Intro Solides",               date: "2025-12-02" },
+  { label: "Intro Solides", date: "2025-12-02" },
 
-  { label: "Fin des tétées",              date: "2025-11-10" },
-  { label: "Fin lait maternel (biberon)", date: "2025-10-23" }
+  { label: "Fin des tétées", date: "2025-11-10" },
+
+  { label: "Fin lait maternel (biberon)", date: "2025-10-23" },
 ];
 
-/* -------------------------------------------------
-   Props attendues :
-   - nutritionData : tableau d’objets (déjà formaté par le backend)
-   ------------------------------------------------- */
+/* ---------------------------------------------------------------
+   Petite fonction utilitaire – formatte la date pour l’Axe X
+   --------------------------------------------------------------- */
+const formatDate = (isoStr) => {
+  const d = new Date(isoStr);
+  // Retourne "dd/mm" (ex. "29/07")
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}`;
+};
+
+/* ---------------------------------------------------------------
+   Component
+   --------------------------------------------------------------- */
 const NutritionDashboard = ({ nutritionData }) => {
   // Si aucune donnée n’est fournie, on affiche un message simple.
   if (!nutritionData || nutritionData.length === 0) {
@@ -47,15 +62,6 @@ const NutritionDashboard = ({ nutritionData }) => {
       </p>
     );
   }
-
-  /* -------------------------------------------------
-     Convertir les dates de phase en timestamps (millis)
-     afin que Recharts les comprenne sur l’axe X.
-     ------------------------------------------------- */
-  const phaseLines = phases.map((p) => ({
-    ...p,
-    timestamp: new Date(p.date).getTime()
-  }));
 
   return (
     <div
@@ -67,12 +73,7 @@ const NutritionDashboard = ({ nutritionData }) => {
         borderRadius: "8px",
       }}
     >
-      <h2
-        style={{
-          textAlign: "center",
-          fontFamily: "sans-serif",
-        }}
-      >
+      <h2 style={{ textAlign: "center", fontFamily: "sans-serif" }}>
         Suivi Nutritionnel Éléonore
       </h2>
 
@@ -82,22 +83,19 @@ const NutritionDashboard = ({ nutritionData }) => {
           margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          {/* ------------------- AXES ------------------- */}
+
+          {/* ------------------- Axe X (date) ------------------- */}
           <XAxis
             dataKey="date"
             minTickGap={40}
-            tickFormatter={(str) => {
-              const d = new Date(str);
-              return d.toLocaleDateString("fr-FR", {
-                day: "2-digit",
-                month: "2-digit",
-              });
-            }}
+            tickFormatter={formatDate}
             style={{ fontSize: "12px" }}
           />
+
+          {/* ------------------- Axe Y (ml) ------------------- */}
           <YAxis unit="ml" style={{ fontSize: "12px" }} />
 
-          {/* ------------------- TOOLTIP & LEGEND ------------------- */}
+          {/* ------------------- Tooltip ------------------- */}
           <Tooltip
             labelFormatter={(label) =>
               new Date(label).toLocaleDateString("fr-FR", {
@@ -108,33 +106,34 @@ const NutritionDashboard = ({ nutritionData }) => {
               })
             }
           />
+
+          {/* ------------------- Legend ------------------- */}
           <Legend />
 
-          {/* ------------------- PHASES (ReferenceLines) ------------------- */}
-          {phaseLines.map((phase) => (
+          {/* ------------------- Phases (vertical lines) ------------------- */}
+          {PHASES.map((phase) => (
             <ReferenceLine
               key={phase.label}
-              x={phase.timestamp}
+              x={phase.date}
               stroke="#8884d8"
-              strokeDasharray="4 4"
-              strokeWidth={1}
-            >
-              {/* Le label apparaît au-dessus de la ligne */}
-              <text
-                x={0}
-                dy={-4}
-                textAnchor="middle"
-                fill="#555"
-                fontSize="10"
-                fontFamily="sans-serif"
-              >
-                {phase.label}
-              </text>
-            </ReferenceLine>
+              strokeDasharray="4 2"
+              // Le label peut être soit une string, soit un objet custom.
+              // Ici on utilise un petit composant inline pour le style.
+              label={{
+                value: phase.label,
+                position: "top",
+                fill: "#555",
+                fontSize: 11,
+                // Décalage vertical pour éviter qu’il chevauche le titre du chart
+                dy: -8,
+                // Rotation légère pour gagner de la place (facultatif)
+                angle: -45,
+                textAnchor: "middle",
+              }}
+            />
           ))}
 
-          {/* ------------------- AREAS (laits) ------------------- */}
-          {/* Allaitement (Sein) – apparaît uniquement si la donnée existe */}
+          {/* ------------------- Areas (laits) ------------------- */}
           <Area
             type="monotone"
             dataKey="sein"
@@ -153,8 +152,6 @@ const NutritionDashboard = ({ nutritionData }) => {
             name="Lait Maternel (Bib)"
             connectNulls
           />
-
-          {/* Laits infantiles */}
           <Area
             type="monotone"
             dataKey="kabrita"
