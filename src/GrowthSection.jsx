@@ -20,7 +20,7 @@ import { omsTables, cdcTables } from "./growthData";
    ----------------------------------------------------------------- */
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL ||
-  "https://YOUR_BACKEND_URL_ON_RENDER.com";
+  "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
    Helper – calculate age in months (fractional) from birth date
