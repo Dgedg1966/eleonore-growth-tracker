@@ -1,7 +1,6 @@
 // src/GrowthSection.jsx
 import React, { useEffect, useState } from "react";
 import {
-  Area,
   Line,
   XAxis,
   YAxis,
@@ -14,14 +13,13 @@ import {
 import { Scale, Ruler, Brain } from "lucide-react";
 
 /* -----------------------------------------------------------------
-   Backend URL – fixed to the one you gave
+   Backend URL – fixed to the one you gave
    ----------------------------------------------------------------- */
-const BACKEND_URL =
-  "https://eleonore-backend.onrender.com";
+const BACKEND_URL = "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
-   Import the reference tables (OMS & CDC) – they contain the full
-   percentile sets you posted in growthData.js
+   Import reference tables (OMS & CDC) – they contain the full set of
+   percentiles you posted in growthData.js
    ----------------------------------------------------------------- */
 import { omsTables, cdcTables } from "./growthData";
 
@@ -41,17 +39,34 @@ const getAgeInMonths = (birthDate, currentDate) => {
 };
 
 /* -----------------------------------------------------------------
-   Percentile calculator – works for both OMS (p3,p15,p50,p85,p97)
-   and CDC (p3,p50,p97).  It interpolates linearly between the two
-   nearest age rows and then linearly between the two nearest
-   percentile values.
+   Linear interpolation between two age rows
+   ----------------------------------------------------------------- */
+const interpolateRow = (low, high, targetAge) => {
+  if (low.month === high.month) return low; // exact match
+  const ratio = (targetAge - low.month) / (high.month - low.month);
+  const out = { month: targetAge };
+  // Interpolate every numeric field (p3, p15, p50, p85, p97)
+  Object.keys(low).forEach((key) => {
+    if (key === "month") return;
+    const lo = low[key];
+    const hi = high[key];
+    if (typeof lo === "number" && typeof hi === "number") {
+      out[key] = lo + (hi - lo) * ratio;
+    }
+  });
+  return out;
+};
+
+/* -----------------------------------------------------------------
+   Percentile calculator – works for both OMS (5 percentiles) and
+   CDC (3 percentiles). Returns the percentile number (0‑100).
    ----------------------------------------------------------------- */
 const calculatePercentile = (value, ageMonths, type, tables) => {
-  if (value == null || ageMonths == null) return null;
+  if (value == null) return null;
   const data = tables[type];
   if (!data) return null;
 
-  // Find surrounding age rows
+  // Find the two rows that bound the target age
   let lower = data[0];
   let upper = data[data.length - 1];
   for (let i = 0; i < data.length; i++) {
@@ -62,25 +77,18 @@ const calculatePercentile = (value, ageMonths, type, tables) => {
     }
   }
 
-  // Linear interpolation of each percentile between lower & upper ages
-  const interp = (key) => {
-    const lo = lower[key];
-    const hi = upper[key];
-    if (lo == null || hi == null) return null;
-    if (lower.month === upper.month) return lo; // exact age match
-    const ratio = (ageMonths - lower.month) / (upper.month - lower.month);
-    return lo + (hi - lo) * ratio;
-  };
+  // Interpolated row for the exact age
+  const row = interpolateRow(lower, upper, ageMonths);
 
-  // Build the list of available percentiles for this age
+  // Build an ordered list of available percentiles for this row
   const percList = [];
-  if (lower.p3 != null) percList.push({ p: 3, v: interp("p3") });
-  if (lower.p15 != null) percList.push({ p: 15, v: interp("p15") });
-  if (lower.p50 != null) percList.push({ p: 50, v: interp("p50") });
-  if (lower.p85 != null) percList.push({ p: 85, v: interp("p85") });
-  if (lower.p97 != null) percList.push({ p: 97, v: interp("p97") });
+  if (row.p3 != null) percList.push({ p: 3, v: row.p3 });
+  if (row.p15 != null) percList.push({ p: 15, v: row.p15 });
+  if (row.p50 != null) percList.push({ p: 50, v: row.p50 });
+  if (row.p85 != null) percList.push({ p: 85, v: row.p85 });
+  if (row.p97 != null) percList.push({ p: 97, v: row.p97 });
 
-  // Sort by value (just in case)
+  // Sort by the value (just in case)
   percList.sort((a, b) => a.v - b.v);
 
   // Clamp to extremes
@@ -107,7 +115,6 @@ const useGrowthData = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   useEffect(() => {
     const fetchGrowth = async () => {
       try {
@@ -126,28 +133,29 @@ const useGrowthData = () => {
     };
     fetchGrowth();
   }, []);
-
   return { data, loading, error };
 };
 
 /* -----------------------------------------------------------------
    GrowthSection component
    ----------------------------------------------------------------- */
-const GrowthSection = ({ selectedStandard }) => {
+export default function GrowthSection({ selectedStandard }) {
   const { data, loading, error } = useGrowthData();
 
   const birthDate = "2025-05-14";
 
-  // Enrich each row with age (months) and percentiles for each metric
+  // -----------------------------------------------------------------
+  // 1️⃣  Enrich each row with age (months) and percentiles for each metric
+  // -----------------------------------------------------------------
   const enriched = data.map((row) => ({
     ...row,
     ageMonths: getAgeInMonths(birthDate, row.date),
   }));
 
-  // Choose the reference tables according to the selected standard
+  // Choose the correct reference tables
   const tables = selectedStandard === "oms" ? omsTables : cdcTables;
 
-  // Add percentile values to each measurement
+  // Add percentile values for each measurement
   const withPercentiles = enriched.map((row) => ({
     ...row,
     weightPercentile:
@@ -164,7 +172,35 @@ const GrowthSection = ({ selectedStandard }) => {
         : null,
   }));
 
-  // Helper to format dates for the X‑axis (dd/mm)
+  // -----------------------------------------------------------------
+  // 2️⃣  Build series for the **reference percentiles** (each percentile = its own line)
+  // -----------------------------------------------------------------
+  const buildReferenceSeries = (type) => {
+    // We iterate over the whole table (0‑24 mois) and output a point for each month
+    const table = tables[type];
+    const series = {};
+
+    // Initialise empty arrays for each percentile we have in the table
+    Object.keys(table[0]).forEach((key) => {
+      if (key.startsWith("p")) series[key] = [];
+    });
+
+    table.forEach((row) => {
+      const label = `${row.month} mo`;
+      Object.keys(series).forEach((pKey) => {
+        series[pKey].push({ month: label, value: row[pKey] });
+      });
+    });
+    return series; // e.g. { p3: [...], p15: [...], … }
+  };
+
+  const weightRefs = buildReferenceSeries("weight");
+  const heightRefs = buildReferenceSeries("height");
+  const headRefs = buildReferenceSeries("head");
+
+  // -----------------------------------------------------------------
+  // 3️⃣  Build series for Éléonore’s **actual measurements**
+  // -----------------------------------------------------------------
   const formatDate = (iso) => {
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2, "0")}/${String(
@@ -172,24 +208,22 @@ const GrowthSection = ({ selectedStandard }) => {
     ).padStart(2, "0")}`;
   };
 
-  // Build series for each metric (value + percentile)
-  const buildSeries = (key) =>
+  const buildChildSeries = (key) =>
     withPercentiles
       .filter((r) => r[key] != null)
       .map((r) => ({
         date: formatDate(r.date),
         value: r[key],
-        percentile: r[`${key}Percentile`],
       }));
 
-  const weightSeries = buildSeries("weight");
-  const heightSeries = buildSeries("height");
-  const headSeries = buildSeries("head");
+  const weightChild = buildChildSeries("weight");
+  const heightChild = buildChildSeries("height");
+  const headChild = buildChildSeries("head");
 
-  /* -----------------------------------------------------------------
-     Rendering helpers – one chart per metric
-     ----------------------------------------------------------------- */
-  const renderChart = (title, series, yLabel, lineColor) => (
+  // -----------------------------------------------------------------
+  // 4️⃣  Rendering helper – one chart per metric
+  // -----------------------------------------------------------------
+  const renderChart = (title, refs, childSeries, yLabel, lineColor) => (
     <section className="mb-12">
       <div className="flex items-center gap-2 mb-4">
         {title === "Poids" && <Scale size={24} />}
@@ -198,90 +232,98 @@ const GrowthSection = ({ selectedStandard }) => {
         <h2 className="text-xl font-semibold">{title}</h2>
       </div>
 
-      {series.length === 0 ? (
-        <p className="text-gray-600">Aucune donnée disponible.</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={380}>
-          <ComposedChart data={series}>
-            {/* Grid & axes */}
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="date"
-              tick={{ fill: "#4a5568", fontSize: 12 }}
-              axisLine={{ stroke: "#cbd5e0" }}
-            />
-            <YAxis
-              yAxisId="left"
-              label={{
-                value: yLabel,
-                angle: -90,
-                position: "insideLeft",
-                fill: "#4a5568",
-                fontSize: 12,
-              }}
-              tick={{ fill: "#4a5568" }}
-            />
-            {/* Percentile axis (right) */}
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              label={{
-                value: "Percentile",
-                angle: 90,
-                position: "insideRight",
-                fill: "#4a5568",
-                fontSize: 12,
-              }}
-              tick={{ fill: "#4a5568" }}
-            />
+      <ResponsiveContainer width="100%" height={380}>
+        <ComposedChart data={childSeries}>
+          {/* Axes */}
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <XAxis
+            dataKey="date"
+            tick={{ fill: "#4a5568", fontSize: 12 }}
+            axisLine={{ stroke: "#cbd5e0" }}
+          />
+          <YAxis
+            yAxisId="left"
+            label={{
+              value: yLabel,
+              angle: -90,
+              position: "insideLeft",
+              fill: "#4a5568",
+              fontSize: 12,
+            }}
+            tick={{ fill: "#4a5568" }}
+          />
+          {/* Right axis for percentiles (0‑100) */}
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            label={{
+              value: "Percentile",
+              angle: 90,
+              position: "insideRight",
+              fill: "#4a5568",
+              fontSize: 12,
+            }}
+            tick={{ fill: "#4a5568" }}
+          />
 
-            {/* Tooltip */}
-            <Tooltip
-              contentStyle={{ backgroundColor: "#fff", borderRadius: "4px" }}
-              formatter={(val, name) => [
-                typeof val === "number" ? val.toFixed(2) : val,
-                name,
-              ]}
-            />
-            <Legend />
+          <Tooltip
+            contentStyle={{ backgroundColor: "#fff", borderRadius: "4px" }}
+            formatter={(val, name) => [
+              typeof val === "number" ? val.toFixed(2) : val,
+              name,
+            ]}
+          />
+          <Legend />
 
-            {/* ----- Percentile areas (light background) ----- */}
-            {/* We draw the five percentile curves as separate Areas.
-                The fill colour is very light so the child’s line stays prominent. */}
-            <Area
-              yAxisId="right"
-              type="monotone"
-              dataKey="percentile"
-              stroke="#6b7280"
-              fill="#6b7280"
-              fillOpacity={0.1}
-              name={`Percentile (${selectedStandard.toUpperCase()})`}
-            />
-
-            {/* ----- Child’s actual measurements (bold line) ----- */}
+          {/* ----- Reference percentile lines (each on its own colour) ----- */}
+          {Object.entries(refs).map(([pKey, pts]) => (
             <Line
-              yAxisId="left"
+              key={pKey}
+              yAxisId="right"
               type="monotone"
+              data={pts}
               dataKey="value"
-              stroke={lineColor}
-              strokeWidth={4}
-              dot={{
-                r: 6,
-                stroke: "#fff",
-                strokeWidth: 2,
-              }}
-              name={title}
-              connectNulls
+              stroke={
+                // Assign distinct colours per percentile
+                pKey === "p3"
+                  ? "#a3a3a3"
+                  : pKey === "p15"
+                  ? "#7c7c7c"
+                  : pKey === "p50"
+                  ? "#4b5563"
+                  : pKey === "p85"
+                  ? "#374151"
+                  : "#1f2937"
+              }
+              strokeDasharray="5 5"
+              dot={false}
+              name={`OMS ${pKey.toUpperCase()}`}
             />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
+          ))}
+
+          {/* ----- Child’s actual measurements (bold line) ----- */}
+          <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="value"
+            stroke={lineColor}
+            strokeWidth={4}
+            dot={{
+              r: 6,
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+            name={title}
+            connectNulls
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
     </section>
   );
 
-  /* -----------------------------------------------------------------
-     UI rendering
-     ----------------------------------------------------------------- */
+  // -----------------------------------------------------------------
+  // 5️⃣  UI (loading / error / main render)
+  // -----------------------------------------------------------------
   if (loading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -313,57 +355,70 @@ const GrowthSection = ({ selectedStandard }) => {
 
   return (
     <div className="mt-6">
-      {/* ---- Metric cards (summary) ---- */}
+      {/* ---- Summary cards (latest values) ---- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Weight */}
+        {/* Weight card */}
         <div className="bg-pink-100 p-6 rounded-xl shadow-md">
           <h3 className="text-xl font-bold mb-2">Poids</h3>
           <p className="text-2xl font-semibold">
-            {weightSeries[weightSeries.length - 1]?.value ?? "–"} kg
+            {weightChild[weightChild.length - 1]?.value ?? "–"} kg
           </p>
           <p className="text-sm text-gray-600">
             P{" "}
-            {weightSeries[weightSeries.length - 1]?.percentile != null
-              ? weightSeries[weightSeries.length - 1].percentile
-              : "–"}
+            {withPercentiles[withPercentiles.length - 1]?.weightPercentile ??
+              "–"}
           </p>
         </div>
 
-        {/* Height */}
+        {/* Height card */}
         <div className="bg-green-100 p-6 rounded-xl shadow-md">
           <h3 className="text-xl font-bold mb-2">Taille</h3>
           <p className="text-2xl font-semibold">
-            {heightSeries[heightSeries.length - 1]?.value ?? "–"} cm
+            {heightChild[heightChild.length - 1]?.value ?? "–"} cm
           </p>
           <p className="text-sm text-gray-600">
             P{" "}
-            {heightSeries[heightSeries.length - 1]?.percentile != null
-              ? heightSeries[heightSeries.length - 1].percentile
-              : "–"}
+            {withPercentiles[withPercentiles.length - 1]?.heightPercentile ??
+              "–"}
           </p>
         </div>
 
-        {/* Head circumference */}
+        {/* Head circumference card */}
         <div className="bg-purple-100 p-6 rounded-xl shadow-md">
           <h3 className="text-xl font-bold mb-2">Tour de tête</h3>
           <p className="text-2xl font-semibold">
-            {headSeries[headSeries.length - 1]?.value ?? "–"} cm
+            {headChild[headChild.length - 1]?.value ?? "–"} cm
           </p>
           <p className="text-sm text-gray-600">
             P{" "}
-            {headSeries[headSeries.length - 1]?.percentile != null
-              ? headSeries[headSeries.length - 1].percentile
-              : "–"}
+            {withPercentiles[withPercentiles.length - 1]?.headPercentile ??
+              "–"}
           </p>
         </div>
       </div>
 
-      {/* ---- Charts ---- */}
-      {renderChart("Poids", weightSeries, "Poids (kg)", "#ec4899")}
-      {renderChart("Taille", heightSeries, "Taille (cm)", "#10b981")}
-      {renderChart("Tour de tête", headSeries, "Tour de tête (cm)", "#6366f1")}
+      {/* ---- Charts (one per metric) ---- */}
+      {renderChart(
+        "Poids",
+        weightRefs,
+        weightChild,
+        "Poids (kg)",
+        "#ec4899"
+      )}
+      {renderChart(
+        "Taille",
+        heightRefs,
+        heightChild,
+        "Taille (cm)",
+        "#10b981"
+      )}
+      {renderChart(
+        "Tour de tête",
+        headRefs,
+        headChild,
+        "Tour de tête (cm)",
+        "#6366f1"
+      )}
     </div>
   );
-};
-
-export default GrowthSection;
+}
