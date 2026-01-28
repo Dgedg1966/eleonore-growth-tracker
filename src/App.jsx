@@ -6,12 +6,12 @@ import GrowthSection from "./GrowthSection";
 import NutritionSection from "./NutritionSection";
 
 /* -----------------------------------------------------------------
-   Backend URL – celui que vous avez indiqué
+   Backend URL – fixed to the one you gave
    ----------------------------------------------------------------- */
 const BACKEND_URL = "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
-   Page d’accueil (welcome) – texte + 4 gros boutons
+   Home page (welcome) – four big cards
    ----------------------------------------------------------------- */
 const Home = ({ goTo }) => (
   <section className="max-w-3xl mx-auto text-center py-12">
@@ -87,23 +87,22 @@ const Home = ({ goTo }) => (
 );
 
 /* -----------------------------------------------------------------
-   Fonction de génération de rapport (JSON + CSV)
+   Rapport (JSON + CSV) – simple implémentation
    ----------------------------------------------------------------- */
 async function generateReport() {
   try {
-    const [growthResp, nutriResp] = await Promise.all([
+    const [growthResp, nutritionResp] = await Promise.all([
       fetch(`${BACKEND_URL}/growth`),
       fetch(`${BACKEND_URL}/nutrition`),
     ]);
-
-    if (!growthResp.ok || !nutriResp.ok) throw new Error("Erreur API");
+    if (!growthResp.ok || !nutritionResp.ok) throw new Error("API error");
 
     const growth = await growthResp.json();
-    const nutrition = await nutriResp.json();
+    const nutrition = await nutritionResp.json();
 
     const report = { growth, nutrition };
 
-    // ---- JSON ----
+    // JSON download
     const jsonBlob = new Blob([JSON.stringify(report, null, 2)], {
       type: "application/json",
     });
@@ -114,7 +113,7 @@ async function generateReport() {
     aJson.click();
     URL.revokeObjectURL(jsonUrl);
 
-    // ---- CSV (growth uniquement, à titre d’exemple) ----
+    // CSV download (growth only, as example)
     const csvRows = [
       ["date", "weight", "height", "head"],
       ...growth.map((r) => [
@@ -125,7 +124,9 @@ async function generateReport() {
       ]),
     ];
     const csvContent = csvRows.map((e) => e.join(",")).join("\n");
-    const csvBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvBlob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
     const csvUrl = URL.createObjectURL(csvBlob);
     const aCsv = document.createElement("a");
     aCsv.href = csvUrl;
@@ -144,7 +145,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("home"); // home | growth | nutrition | analysis
   const [selectedStandard, setSelectedStandard] = useState("oms"); // oms | cdc
 
-  /* ------------------- Synchronisation URL ------------------- */
+  /* ------------------- Sync URL with state ------------------- */
   useEffect(() => {
     const path = window.location.pathname;
     if (path === "/growth") setActiveTab("growth");
@@ -174,7 +175,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ------------------- OMS / CDC SELECTOR (only on growth) ------------------- */}
+      {/* ------------------- OMS / CDC selector (only on growth) ------------------- */}
       {activeTab === "growth" && (
         <div className="flex justify-center mt-4">
           <button
@@ -206,7 +207,7 @@ export default function App() {
 
         {activeTab === "growth" && (
           <>
-            {/* Bouton retour */}
+            {/* Retour à l’accueil */}
             <button
               onClick={() => goTo("home")}
               className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
@@ -219,7 +220,7 @@ export default function App() {
 
         {activeTab === "nutrition" && (
           <>
-            {/* Bouton retour */}
+            {/* Retour à l’accueil */}
             <button
               onClick={() => goTo("home")}
               className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
@@ -232,7 +233,7 @@ export default function App() {
 
         {activeTab === "analysis" && (
           <>
-            {/* Bouton retour */}
+            {/* Retour à l’accueil */}
             <button
               onClick={() => goTo("home")}
               className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
@@ -260,6 +261,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
