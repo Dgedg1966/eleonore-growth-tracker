@@ -1,15 +1,126 @@
 // src/App.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Baby, Droplets, Plus } from "lucide-react";
+
 import GrowthSection from "./GrowthSection";
 import NutritionSection from "./NutritionSection";
 
-const App = () => {
-  // Onglet actif : "growth" ou "nutrition"
-  const [activeTab, setActiveTab] = useState("growth");
-  // Standard de référence : "oms" ou "cdc"
-  const [selectedStandard, setSelectedStandard] = useState("oms");
+/* -----------------------------------------------------------------
+   Backend URL – peut être surchargée via REACT_APP_BACKEND_URL
+   ----------------------------------------------------------------- */
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL ||
+  "https://YOUR_BACKEND_URL_ON_RENDER.com";
 
+/* -----------------------------------------------------------------
+   Page d’accueil (welcome) – texte et 4 gros boutons
+   ----------------------------------------------------------------- */
+const Home = () => (
+  <section className="max-w-3xl mx-auto text-center py-12">
+    <h1 className="text-3xl font-bold mb-6">Bienvenue !</h1>
+    <p className="mb-8 text-lg">
+      Ce dashboard vous permet de suivre la croissance et l’alimentation d’Éléonore
+      en détail. Vous pouvez consulter ses courbes de croissance selon les
+      standards OMS (WHO) ou CDC, ainsi que son historique de consommation de
+      lait avec une analyse dynamique par période.
+    </p>
+
+    {/* ==== 1️⃣ Suivi de croissance ==== */}
+    <div className="my-6">
+      <h2 className="text-xl font-semibold mb-2">
+        Suivi de croissance
+      </h2>
+      <p className="mb-3 text-gray-600">
+        Consultez les courbes de croissance d’Éléonore (poids, taille,
+        périmètre crânien) comparées aux standards OMS et CDC.
+      </p>
+      <a
+        href="/growth"
+        className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
+      >
+        Voir la croissance
+      </a>
+    </div>
+
+    {/* ==== 2️⃣ Consommation de laits ==== */}
+    <div className="my-6">
+      <h2 className="text-xl font-semibold mb-2">
+        Consommation de laits
+      </h2>
+      <p className="mb-3 text-gray-600">
+        Analysez la consommation de lait d’Éléonore avec visualisations
+        dynamiques (globale, mensuelle, hebdomadaire, quotidienne).
+      </p>
+      <a
+        href="/nutrition"
+        className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
+      >
+        Voir la nutrition
+      </a>
+    </div>
+
+    {/* ==== 3️⃣ Création de rapports ==== */}
+    <div className="my-6">
+      <h2 className="text-xl font-semibold mb-2">
+        Création de rapports
+      </h2>
+      <p className="mb-3 text-gray-600">
+        Téléchargez les rapports et exportez les données en CSV ou JSON.
+        Les rapports, destinés au pédiatre, sont disponibles en français ou en
+        anglais.
+      </p>
+      <button
+        disabled
+        className="inline-block px-6 py-2 bg-gray-400 text-white rounded-full font-semibold cursor-not-allowed"
+      >
+        Générer le rapport (à implémenter)
+      </button>
+    </div>
+
+    {/* ==== 4️⃣ Analyse ==== */}
+    <div className="my-6">
+      <h2 className="text-xl font-semibold mb-2">
+        Analyse
+      </h2>
+      <p className="mb-3 text-gray-600">
+        Consultez la vélocité de croissance et les étapes de développement
+        d’Éléonore.
+      </p>
+      <button
+        disabled
+        className="inline-block px-6 py-2 bg-gray-400 text-white rounded-full font-semibold cursor-not-allowed"
+      >
+        Accéder à l’analyse (à implémenter)
+      </button>
+    </div>
+  </section>
+);
+
+/* -----------------------------------------------------------------
+   Application principale
+   ----------------------------------------------------------------- */
+export default function App() {
+  /* ---------- État de navigation ---------- */
+  const [activeTab, setActiveTab] = useState("home"); // home | growth | nutrition
+  const [selectedStandard, setSelectedStandard] = useState("oms"); // oms | cdc
+
+  /* ---------- Synchronisation avec l’URL ---------- */
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === "/growth") setActiveTab("growth");
+    else if (path === "/nutrition") setActiveTab("nutrition");
+    else setActiveTab("home");
+  }, []);
+
+  /* ---------- Navigation helpers ---------- */
+  const goTo = (tab) => {
+    // Met à jour l’URL (sans rechargement complet)
+    const newPath = tab === "home" ? "/" : `/${tab}`;
+    window.history.pushState(null, "", newPath);
+    setActiveTab(tab);
+  };
+
+  /* ---------- Rendu ---------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900">
       {/* ------------------- HEADER ------------------- */}
@@ -28,7 +139,7 @@ const App = () => {
       {/* ------------------- TAB SELECTOR ------------------- */}
       <div className="flex justify-center mt-6 space-x-4">
         <button
-          onClick={() => setActiveTab("growth")}
+          onClick={() => goTo("growth")}
           className={`px-6 py-2 rounded-full font-semibold transition ${
             activeTab === "growth"
               ? "bg-pink-600 text-white shadow"
@@ -38,7 +149,7 @@ const App = () => {
           Croissance
         </button>
         <button
-          onClick={() => setActiveTab("nutrition")}
+          onClick={() => goTo("nutrition")}
           className={`px-6 py-2 rounded-full font-semibold transition ${
             activeTab === "nutrition"
               ? "bg-pink-600 text-white shadow"
@@ -49,13 +160,12 @@ const App = () => {
         </button>
       </div>
 
-      {/* ------------------- STANDARD SELECTOR (OMS / CDC) ------------------- */}
-      <div className="flex justify-center mt-4">
-        <div className="flex items-center space-x-2">
-          <span className="font-medium">Référence :</span>
+      {/* ------------------- OMS / CDC SELECTOR (only on growth) ------------------- */}
+      {activeTab === "growth" && (
+        <div className="flex justify-center mt-4">
           <button
             onClick={() => setSelectedStandard("oms")}
-            className={`px-4 py-1 rounded ${
+            className={`px-4 py-1 rounded mr-2 ${
               selectedStandard === "oms"
                 ? "bg-pink-600 text-white"
                 : "bg-gray-200 text-gray-800"
@@ -74,13 +184,15 @@ const App = () => {
             CDC
           </button>
         </div>
-      </div>
+      )}
 
       {/* ------------------- MAIN CONTENT ------------------- */}
       <main className="max-w-6xl mx-auto p-6">
-        {activeTab === "growth" ? (
+        {activeTab === "home" && <Home />}
+        {activeTab === "growth" && (
           <GrowthSection selectedStandard={selectedStandard} />
-        ) : (
+        )}
+        {activeTab === "nutrition" && (
           <NutritionSection selectedStandard={selectedStandard} />
         )}
       </main>
@@ -88,14 +200,14 @@ const App = () => {
       {/* ------------------- FOOTER ------------------- */}
       <footer className="bg-gray-100 py-4 mt-8">
         <div className="max-w-6xl mx-auto text-center text-sm text-gray-600">
-          © {new Date().getFullYear()} Éléonore Growth Tracker – Tous droits réservés.
+          © {new Date().getFullYear()} Éléonore Growth Tracker – Tous droits
+          réservés.
         </div>
       </footer>
     </div>
   );
-};
+}
 
-export default App;
 
 
 
