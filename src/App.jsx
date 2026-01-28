@@ -6,10 +6,9 @@ import GrowthSection from "./GrowthSection";
 import NutritionSection from "./NutritionSection";
 
 /* -----------------------------------------------------------------
-   Backend URL – vous avez indiqué https://eleonore-backend.onrender.com
+   Backend URL – celui que vous avez indiqué
    ----------------------------------------------------------------- */
-const BACKEND_URL =
-  "https://eleonore-backend.onrender.com";
+const BACKEND_URL = "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
    Page d’accueil (welcome) – texte + 4 gros boutons
@@ -96,7 +95,6 @@ async function generateReport() {
       fetch(`${BACKEND_URL}/growth`),
       fetch(`${BACKEND_URL}/nutrition`),
     ]);
-
     if (!growthResp.ok || !nutriResp.ok) throw new Error("Erreur API");
 
     const growth = await growthResp.json();
@@ -104,7 +102,7 @@ async function generateReport() {
 
     const report = { growth, nutrition };
 
-    // ---- JSON ----
+    // JSON download
     const jsonBlob = new Blob([JSON.stringify(report, null, 2)], {
       type: "application/json",
     });
@@ -115,7 +113,7 @@ async function generateReport() {
     aJson.click();
     URL.revokeObjectURL(jsonUrl);
 
-    // ---- CSV (growth uniquement, à titre d’exemple) ----
+    // CSV (growth only, example)
     const csvRows = [
       ["date", "weight", "height", "head"],
       ...growth.map((r) => [
@@ -126,7 +124,9 @@ async function generateReport() {
       ]),
     ];
     const csvContent = csvRows.map((e) => e.join(",")).join("\n");
-    const csvBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvBlob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
     const csvUrl = URL.createObjectURL(csvBlob);
     const aCsv = document.createElement("a");
     aCsv.href = csvUrl;
@@ -175,7 +175,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ------------------- NAVIGATION BUTTONS (only on home) ------------------- */}
+      {/* ------------------- BOUTONS GROS (HOME ONLY) ------------------- */}
       {activeTab === "home" && (
         <div className="flex justify-center mt-6 space-x-4">
           <button
@@ -279,6 +279,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
