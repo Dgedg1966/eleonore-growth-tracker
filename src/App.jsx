@@ -13,7 +13,7 @@ const BACKEND_URL =
   "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
-   Page d’accueil (welcome) – texte et 4 gros boutons
+   Home page – welcome + 4 big cards
    ----------------------------------------------------------------- */
 const Home = () => (
   <section className="max-w-3xl mx-auto text-center py-12">
@@ -27,9 +27,7 @@ const Home = () => (
 
     {/* ==== 1️⃣ Suivi de croissance ==== */}
     <div className="my-6">
-      <h2 className="text-xl font-semibold mb-2">
-        Suivi de croissance
-      </h2>
+      <h2 className="text-xl font-semibold mb-2">Suivi de croissance</h2>
       <p className="mb-3 text-gray-600">
         Consultez les courbes de croissance d’Éléonore (poids, taille,
         périmètre crânien) comparées aux standards OMS et CDC.
@@ -44,9 +42,7 @@ const Home = () => (
 
     {/* ==== 2️⃣ Consommation de laits ==== */}
     <div className="my-6">
-      <h2 className="text-xl font-semibold mb-2">
-        Consommation de laits
-      </h2>
+      <h2 className="text-xl font-semibold mb-2">Consommation de laits</h2>
       <p className="mb-3 text-gray-600">
         Analysez la consommation de lait d’Éléonore avec visualisations
         dynamiques (globale, mensuelle, hebdomadaire, quotidienne).
@@ -61,9 +57,7 @@ const Home = () => (
 
     {/* ==== 3️⃣ Création de rapports ==== */}
     <div className="my-6">
-      <h2 className="text-xl font-semibold mb-2">
-        Création de rapports
-      </h2>
+      <h2 className="text-xl font-semibold mb-2">Création de rapports</h2>
       <p className="mb-3 text-gray-600">
         Téléchargez les rapports et exportez les données en CSV ou JSON.
         Les rapports, destinés au pédiatre, sont disponibles en français ou en
@@ -79,9 +73,7 @@ const Home = () => (
 
     {/* ==== 4️⃣ Analyse ==== */}
     <div className="my-6">
-      <h2 className="text-xl font-semibold mb-2">
-        Analyse
-      </h2>
+      <h2 className="text-xl font-semibold mb-2">Analyse</h2>
       <p className="mb-3 text-gray-600">
         Consultez la vélocité de croissance et les étapes de développement
         d’Éléonore.
@@ -97,14 +89,14 @@ const Home = () => (
 );
 
 /* -----------------------------------------------------------------
-   Application principale
+   Main App component
    ----------------------------------------------------------------- */
 export default function App() {
-  /* ---------- État de navigation ---------- */
+  /* ---------- Navigation state ---------- */
   const [activeTab, setActiveTab] = useState("home"); // home | growth | nutrition
   const [selectedStandard, setSelectedStandard] = useState("oms"); // oms | cdc
 
-  /* ---------- Synchronisation avec l’URL ---------- */
+  /* ---------- Sync with URL ---------- */
   useEffect(() => {
     const path = window.location.pathname;
     if (path === "/growth") setActiveTab("growth");
@@ -112,15 +104,12 @@ export default function App() {
     else setActiveTab("home");
   }, []);
 
-  /* ---------- Navigation helpers ---------- */
   const goTo = (tab) => {
-    // Met à jour l’URL (sans rechargement complet)
     const newPath = tab === "home" ? "/" : `/${tab}`;
     window.history.pushState(null, "", newPath);
     setActiveTab(tab);
   };
 
-  /* ---------- Rendu ---------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900">
       {/* ------------------- HEADER ------------------- */}
@@ -136,29 +125,31 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ------------------- TAB SELECTOR ------------------- */}
-      <div className="flex justify-center mt-6 space-x-4">
-        <button
-          onClick={() => goTo("growth")}
-          className={`px-6 py-2 rounded-full font-semibold transition ${
-            activeTab === "growth"
-              ? "bg-pink-600 text-white shadow"
-              : "bg-gray-200 text-gray-800"
-          }`}
-        >
-          Croissance
-        </button>
-        <button
-          onClick={() => goTo("nutrition")}
-          className={`px-6 py-2 rounded-full font-semibold transition ${
-            activeTab === "nutrition"
-              ? "bg-pink-600 text-white shadow"
-              : "bg-gray-200 text-gray-800"
-          }`}
-        >
-          Alimentation
-        </button>
-      </div>
+      {/* ------------------- HOME / GROWTH / NUTRITION SELECTOR ------------------- */}
+      {activeTab !== "home" && (
+        <div className="flex justify-center mt-6 space-x-4">
+          <button
+            onClick={() => goTo("growth")}
+            className={`px-6 py-2 rounded-full font-semibold transition ${
+              activeTab === "growth"
+                ? "bg-pink-600 text-white shadow"
+                : "bg-gray-200 text-gray-800"
+            }`}
+          >
+            Croissance
+          </button>
+          <button
+            onClick={() => goTo("nutrition")}
+            className={`px-6 py-2 rounded-full font-semibold transition ${
+              activeTab === "nutrition"
+                ? "bg-pink-600 text-white shadow"
+                : "bg-gray-200 text-gray-800"
+            }`}
+          >
+            Alimentation
+          </button>
+        </div>
+      )}
 
       {/* ------------------- OMS / CDC SELECTOR (only on growth) ------------------- */}
       {activeTab === "growth" && (
@@ -189,11 +180,33 @@ export default function App() {
       {/* ------------------- MAIN CONTENT ------------------- */}
       <main className="max-w-6xl mx-auto p-6">
         {activeTab === "home" && <Home />}
+
         {activeTab === "growth" && (
-          <GrowthSection selectedStandard={selectedStandard} />
+          <>
+            {/* Back button */}
+            <button
+              onClick={() => goTo("home")}
+              className="mb-4 flex items-center text-pink-600 hover:underline"
+            >
+              ← Retour à l’accueil
+            </button>
+
+            <GrowthSection selectedStandard={selectedStandard} />
+          </>
         )}
+
         {activeTab === "nutrition" && (
-          <NutritionSection selectedStandard={selectedStandard} />
+          <>
+            {/* Back button */}
+            <button
+              onClick={() => goTo("home")}
+              className="mb-4 flex items-center text-pink-600 hover:underline"
+            >
+              ← Retour à l’accueil
+            </button>
+
+            <NutritionSection selectedStandard={selectedStandard} />
+          </>
         )}
       </main>
 
