@@ -13,6 +13,7 @@ import {
   ComposedChart,
 } from "recharts";
 import { Scale, Ruler, Brain, Plus } from "lucide-react";
+import { omsTables, cdcTables } from "./growthData";
 
 /* -----------------------------------------------------------------
    Backend URL – can be overridden with REACT_APP_BACKEND_URL
@@ -153,7 +154,7 @@ const GrowthSection = ({ selectedStandard }) => {
   // `cdcTables`. We import them here.
   // --------------------------------------------------------------
   // eslint-disable-next-line import/no-unresolved
-  const { omsTables, cdcTables } = require("./growthData"); // <-- keep as ES import if you prefer
+
   const tables = selectedStandard === "oms" ? { weight: omsTables.weight, height: omsTables.height, head: omsTables.head } : { weight: cdcTables.weight, height: cdcTables.height, head: cdcTables.head };
 
   // Compute percentiles for each measurement
