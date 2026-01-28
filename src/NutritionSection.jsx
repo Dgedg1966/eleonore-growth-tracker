@@ -1,41 +1,38 @@
 // src/NutritionSection.jsx
 import React, { useEffect, useState } from "react";
-import { Droplets, Plus } from "lucide-react";
+import { Droplets } from "lucide-react";
+
 import NutritionDashboard from "./NutritionDashboard";
 
-/* ---------------------------------------------------------------
-   URL du backend – vous pouvez la remplacer par une variable d’environnement
-   --------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+   Backend URL – fixed to the one you gave
+   ----------------------------------------------------------------- */
 const BACKEND_URL = "https://eleonore-backend.onrender.com";
 
-/* ---------------------------------------------------------------
-   Phases d’alimentation d’Éléonore
-   - Chaque objet possède un `label` (texte affiché) et une `date` au format ISO (YYYY‑MM‑DD)
-   - Ces phases seront dessinées comme des `ReferenceLine` dans NutritionDashboard
-   --------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+   Phases d’alimentation – dates (ISO YYYY‑MM‑DD) et libellés
+   ----------------------------------------------------------------- */
 const PHASES = [
-  { label: "Intro Kabrita (Chèvre)",      date: "2025-07-29" },
-  { label: "Fin Kabrita (Chèvre)",        date: "2025-08-09" },
-  { label: "Transition Kendamil (Chèvre)",date: "2025-08-13" },
+  { label: "Intro Kabrita (Chèvre)", date: "2025-07-29" },
+  { label: "Fin Kabrita (Chèvre)", date: "2025-08-09" },
+  { label: "Transition Kendamil (Chèvre)", date: "2025-08-13" },
 
-  { label: "Intro Aptamil (Vache)",       date: "2025-07-29" },
-  { label: "Fin Aptamil (Vache)",         date: "2025-11-14" },
+  { label: "Intro Aptamil (Vache)", date: "2025-07-29" },
+  { label: "Fin Aptamil (Vache)", date: "2025-11-14" },
 
-  { label: "Intro Kendamil (Chèvre)",     date: "2025-11-11" },
-  { label: "Fin Kendamil (Chèvre)",       date: "2026-01-19" },
+  { label: "Intro Kendamil (Chèvre)", date: "2025-11-11" },
+  { label: "Fin Kendamil (Chèvre)", date: "2026-01-19" },
 
-  { label: "Intro France Lait",           date: "2025-12-16" },
+  { label: "Intro France Lait", date: "2025-12-16" },
 
-  { label: "Intro Solides",               date: "2025-12-02" },
-
-  { label: "Fin des tétées",              date: "2025-11-10" },
-
-  { label: "Fin lait maternel (biberon)", date: "2025-10-23" }
+  { label: "Introduction solides", date: "2025-12-02" },
+  { label: "Fin des tétées", date: "2025-11-10" },
+  { label: "Fin lait maternel biberon", date: "2025-10-23" }
 ];
 
-/* ---------------------------------------------------------------
-   Hook personnalisé – fetch les données nutritionnelles
-   --------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+   Hook – fetch nutrition data from the backend
+   ----------------------------------------------------------------- */
 const useNutrition = () => {
   const [data, setData] = useState({ entries: [], weekly_average: null });
   const [loading, setLoading] = useState(true);
@@ -46,10 +43,13 @@ const useNutrition = () => {
       try {
         const resp = await fetch(`${BACKEND_URL}/nutrition`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
         const json = await resp.json();
+        // Ensure we always have the expected shape
         setData({
-          entries: json.entries || [],
-          weekly_average: json.weekly_average ?? null
+          entries: json.entries ?? [],
+          weekly_average:
+            json.weekly_average != null ? json.weekly_average : null
         });
         setError(null);
       } catch (e) {
@@ -66,17 +66,17 @@ const useNutrition = () => {
   return { data, loading, error };
 };
 
-/* ---------------------------------------------------------------
-   NutritionSection – composant affiché quand l’onglet « Alimentation » est actif
-   --------------------------------------------------------------- */
-const NutritionSection = ({ selectedStandard }) => {
+/* -----------------------------------------------------------------
+   NutritionSection component
+   ----------------------------------------------------------------- */
+export default function NutritionSection({ selectedStandard }) {
   const { data, loading, error } = useNutrition();
 
   if (loading) {
     return (
       <div className="flex justify-center items-center py-10">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-pink-600 mr-3"></div>
-        <span>Chargement des données nutritionnelles…</span>
+        <span>Chargement des données de nutrition…</span>
       </div>
     );
   }
@@ -102,33 +102,30 @@ const NutritionSection = ({ selectedStandard }) => {
   }
 
   return (
-    <section className="mt-6">
+    <section>
+      {/* ---- Retour à l’accueil ---- */}
+      <button
+        onClick={() => {
+          window.history.pushState(null, "", "/");
+          window.location.reload(); // simple reload to go back to home
+        }}
+        className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+      >
+        ← Retour à l’accueil
+      </button>
+
+      {/* ---- Dashboard ---- */}
       <div className="flex items-center gap-2 mb-4">
         <Droplets size={24} />
         <h2 className="text-xl font-semibold">Alimentation – Consommation de lait</h2>
       </div>
 
-      {/* -------------------------------------------------
-          Le composant NutritionDashboard s’occupe du rendu du
-          graphique et des lignes de phase.
-         ------------------------------------------------- */}
       <NutritionDashboard
         nutritionData={data.entries}
-        phases={PHASES}               // on transmet les phases
+        phases={PHASES}
         weeklyAverage={data.weekly_average}
+        selectedStandard={selectedStandard}   // (kept for consistency, not used inside)
       />
-
-      {/* -------------------------------------------------
-          Informations complémentaires (facultatives)
-         ------------------------------------------------- */}
-      {data.weekly_average != null && (
-        <p className="mt-4 text-center text-gray-700">
-          <strong>Moyenne hebdomadaire (toutes les journées) :</strong>{" "}
-          {Number(data.weekly_average).toFixed(2)} ml
-        </p>
-      )}
     </section>
   );
-};
-
-export default NutritionSection;
+}
