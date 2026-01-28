@@ -1,21 +1,20 @@
 // src/App.jsx
 import React, { useEffect, useState } from "react";
-import { Baby, Droplets, Plus } from "lucide-react";
+import { Baby } from "lucide-react";
 
 import GrowthSection from "./GrowthSection";
 import NutritionSection from "./NutritionSection";
 
 /* -----------------------------------------------------------------
-   Backend URL – peut être surchargée via REACT_APP_BACKEND_URL
+   Backend URL – vous avez indiqué https://eleonore-backend.onrender.com
    ----------------------------------------------------------------- */
 const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
   "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
-   Home page – welcome + 4 big cards
+   Page d’accueil (welcome) – texte + 4 gros boutons
    ----------------------------------------------------------------- */
-const Home = () => (
+const Home = ({ goTo }) => (
   <section className="max-w-3xl mx-auto text-center py-12">
     <h1 className="text-3xl font-bold mb-6">Bienvenue !</h1>
     <p className="mb-8 text-lg">
@@ -32,12 +31,12 @@ const Home = () => (
         Consultez les courbes de croissance d’Éléonore (poids, taille,
         périmètre crânien) comparées aux standards OMS et CDC.
       </p>
-      <a
-        href="/growth"
+      <button
+        onClick={() => goTo("growth")}
         className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
       >
         Voir la croissance
-      </a>
+      </button>
     </div>
 
     {/* ==== 2️⃣ Consommation de laits ==== */}
@@ -47,12 +46,12 @@ const Home = () => (
         Analysez la consommation de lait d’Éléonore avec visualisations
         dynamiques (globale, mensuelle, hebdomadaire, quotidienne).
       </p>
-      <a
-        href="/nutrition"
+      <button
+        onClick={() => goTo("nutrition")}
         className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
       >
         Voir la nutrition
-      </a>
+      </button>
     </div>
 
     {/* ==== 3️⃣ Création de rapports ==== */}
@@ -64,10 +63,10 @@ const Home = () => (
         anglais.
       </p>
       <button
-        disabled
-        className="inline-block px-6 py-2 bg-gray-400 text-white rounded-full font-semibold cursor-not-allowed"
+        onClick={generateReport}
+        className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
       >
-        Générer le rapport (à implémenter)
+        Générer le rapport
       </button>
     </div>
 
@@ -79,28 +78,79 @@ const Home = () => (
         d’Éléonore.
       </p>
       <button
-        disabled
-        className="inline-block px-6 py-2 bg-gray-400 text-white rounded-full font-semibold cursor-not-allowed"
+        onClick={() => goTo("analysis")}
+        className="inline-block px-6 py-2 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition"
       >
-        Accéder à l’analyse (à implémenter)
+        Aller à l’analyse
       </button>
     </div>
   </section>
 );
 
 /* -----------------------------------------------------------------
-   Main App component
+   Fonction de génération de rapport (JSON + CSV)
+   ----------------------------------------------------------------- */
+async function generateReport() {
+  try {
+    const [growthResp, nutriResp] = await Promise.all([
+      fetch(`${BACKEND_URL}/growth`),
+      fetch(`${BACKEND_URL}/nutrition`),
+    ]);
+
+    if (!growthResp.ok || !nutriResp.ok) throw new Error("Erreur API");
+
+    const growth = await growthResp.json();
+    const nutrition = await nutriResp.json();
+
+    const report = { growth, nutrition };
+
+    // ---- JSON ----
+    const jsonBlob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const jsonUrl = URL.createObjectURL(jsonBlob);
+    const aJson = document.createElement("a");
+    aJson.href = jsonUrl;
+    aJson.download = "eleonore_report.json";
+    aJson.click();
+    URL.revokeObjectURL(jsonUrl);
+
+    // ---- CSV (growth uniquement, à titre d’exemple) ----
+    const csvRows = [
+      ["date", "weight", "height", "head"],
+      ...growth.map((r) => [
+        r.date,
+        r.weight ?? "",
+        r.height ?? "",
+        r.head ?? "",
+      ]),
+    ];
+    const csvContent = csvRows.map((e) => e.join(",")).join("\n");
+    const csvBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const aCsv = document.createElement("a");
+    aCsv.href = csvUrl;
+    aCsv.download = "eleonore_growth.csv";
+    aCsv.click();
+    URL.revokeObjectURL(csvUrl);
+  } catch (e) {
+    alert("Impossible de générer le rapport : " + e.message);
+  }
+}
+
+/* -----------------------------------------------------------------
+   Application principale
    ----------------------------------------------------------------- */
 export default function App() {
-  /* ---------- Navigation state ---------- */
-  const [activeTab, setActiveTab] = useState("home"); // home | growth | nutrition
+  const [activeTab, setActiveTab] = useState("home"); // home | growth | nutrition | analysis
   const [selectedStandard, setSelectedStandard] = useState("oms"); // oms | cdc
 
-  /* ---------- Sync with URL ---------- */
+  /* ------------------- Synchronisation URL ------------------- */
   useEffect(() => {
     const path = window.location.pathname;
     if (path === "/growth") setActiveTab("growth");
     else if (path === "/nutrition") setActiveTab("nutrition");
+    else if (path === "/analysis") setActiveTab("analysis");
     else setActiveTab("home");
   }, []);
 
@@ -125,26 +175,18 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ------------------- HOME / GROWTH / NUTRITION SELECTOR ------------------- */}
-      {activeTab !== "home" && (
+      {/* ------------------- NAVIGATION BUTTONS (only on home) ------------------- */}
+      {activeTab === "home" && (
         <div className="flex justify-center mt-6 space-x-4">
           <button
             onClick={() => goTo("growth")}
-            className={`px-6 py-2 rounded-full font-semibold transition ${
-              activeTab === "growth"
-                ? "bg-pink-600 text-white shadow"
-                : "bg-gray-200 text-gray-800"
-            }`}
+            className="px-6 py-2 rounded-full bg-pink-600 text-white font-semibold shadow"
           >
             Croissance
           </button>
           <button
             onClick={() => goTo("nutrition")}
-            className={`px-6 py-2 rounded-full font-semibold transition ${
-              activeTab === "nutrition"
-                ? "bg-pink-600 text-white shadow"
-                : "bg-gray-200 text-gray-800"
-            }`}
+            className="px-6 py-2 rounded-full bg-pink-600 text-white font-semibold shadow"
           >
             Alimentation
           </button>
@@ -179,33 +221,51 @@ export default function App() {
 
       {/* ------------------- MAIN CONTENT ------------------- */}
       <main className="max-w-6xl mx-auto p-6">
-        {activeTab === "home" && <Home />}
+        {activeTab === "home" && <Home goTo={goTo} />}
 
         {activeTab === "growth" && (
           <>
-            {/* Back button */}
+            {/* Bouton retour */}
             <button
               onClick={() => goTo("home")}
-              className="mb-4 flex items-center text-pink-600 hover:underline"
+              className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
             >
               ← Retour à l’accueil
             </button>
-
             <GrowthSection selectedStandard={selectedStandard} />
           </>
         )}
 
         {activeTab === "nutrition" && (
           <>
-            {/* Back button */}
+            {/* Bouton retour */}
             <button
               onClick={() => goTo("home")}
-              className="mb-4 flex items-center text-pink-600 hover:underline"
+              className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
             >
               ← Retour à l’accueil
             </button>
-
             <NutritionSection selectedStandard={selectedStandard} />
+          </>
+        )}
+
+        {activeTab === "analysis" && (
+          <>
+            {/* Bouton retour */}
+            <button
+              onClick={() => goTo("home")}
+              className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+            >
+              ← Retour à l’accueil
+            </button>
+            <section className="text-center py-12">
+              <h2 className="text-2xl font-bold mb-4">Analyse détaillée</h2>
+              <p className="text-gray-600">
+                Cette page est un placeholder ; vous pouvez y intégrer
+                l’analyse de la vélocité de croissance, les étapes de
+                développement, etc.
+              </p>
+            </section>
           </>
         )}
       </main>
@@ -213,13 +273,13 @@ export default function App() {
       {/* ------------------- FOOTER ------------------- */}
       <footer className="bg-gray-100 py-4 mt-8">
         <div className="max-w-6xl mx-auto text-center text-sm text-gray-600">
-          © {new Date().getFullYear()} Éléonore Growth Tracker – Tous droits
-          réservés.
+          © {new Date().getFullYear()} Éléonore Growth Tracker – Tous droits réservés.
         </div>
       </footer>
     </div>
   );
 }
+
 
 
 
