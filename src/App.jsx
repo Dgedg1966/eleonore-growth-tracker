@@ -95,6 +95,7 @@ async function generateReport() {
       fetch(`${BACKEND_URL}/growth`),
       fetch(`${BACKEND_URL}/nutrition`),
     ]);
+
     if (!growthResp.ok || !nutriResp.ok) throw new Error("Erreur API");
 
     const growth = await growthResp.json();
@@ -102,7 +103,7 @@ async function generateReport() {
 
     const report = { growth, nutrition };
 
-    // JSON download
+    // ---- JSON ----
     const jsonBlob = new Blob([JSON.stringify(report, null, 2)], {
       type: "application/json",
     });
@@ -113,7 +114,7 @@ async function generateReport() {
     aJson.click();
     URL.revokeObjectURL(jsonUrl);
 
-    // CSV (growth only, example)
+    // ---- CSV (growth uniquement, à titre d’exemple) ----
     const csvRows = [
       ["date", "weight", "height", "head"],
       ...growth.map((r) => [
@@ -124,9 +125,7 @@ async function generateReport() {
       ]),
     ];
     const csvContent = csvRows.map((e) => e.join(",")).join("\n");
-    const csvBlob = new Blob([csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const csvBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const csvUrl = URL.createObjectURL(csvBlob);
     const aCsv = document.createElement("a");
     aCsv.href = csvUrl;
@@ -174,24 +173,6 @@ export default function App() {
           <span className="text-sm opacity-90">Famille seulement</span>
         </div>
       </nav>
-
-      {/* ------------------- BOUTONS GROS (HOME ONLY) ------------------- */}
-      {activeTab === "home" && (
-        <div className="flex justify-center mt-6 space-x-4">
-          <button
-            onClick={() => goTo("growth")}
-            className="px-6 py-2 rounded-full bg-pink-600 text-white font-semibold shadow"
-          >
-            Croissance
-          </button>
-          <button
-            onClick={() => goTo("nutrition")}
-            className="px-6 py-2 rounded-full bg-pink-600 text-white font-semibold shadow"
-          >
-            Alimentation
-          </button>
-        </div>
-      )}
 
       {/* ------------------- OMS / CDC SELECTOR (only on growth) ------------------- */}
       {activeTab === "growth" && (
@@ -279,6 +260,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
