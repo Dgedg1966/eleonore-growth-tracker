@@ -10,7 +10,7 @@ import NutritionSection from "./NutritionSection";
    ----------------------------------------------------------------- */
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL ||
-  "https://YOUR_BACKEND_URL_ON_RENDER.com";
+  "https://eleonore-backend.onrender.com";
 
 /* -----------------------------------------------------------------
    Page d’accueil (welcome) – texte et 4 gros boutons
@@ -207,6 +207,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
