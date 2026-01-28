@@ -1,4 +1,5 @@
 // src/GrowthSection.jsx
+//Eleonore
 import React, { useEffect, useState } from "react";
 import {
   Area,
